@@ -23,454 +23,28 @@ public class ChatSystem {
     private Set<String> mutedPlayers = new HashSet<>();
     private Map<String, String> chatModes = new HashMap<>();
 
-    // ========== SISTEMA DE IA COM PERSONALIDADE ==========
+    private final ScheduledExecutorService botScheduler = Executors.newScheduledThreadPool(1);
+    private EventSystem eventSystem;
+
+    // ========== SISTEMA DE IA SIMPLIFICADO ==========
     private final Map<String, Long> lastBotResponse = new HashMap<>();
     private final Random random = new Random();
-    private final ScheduledExecutorService botScheduler = Executors.newScheduledThreadPool(1);
-    private int messageCounter = 0;
-
-    // ========== SISTEMA DE MONITORAMENTO DE LOGS ==========
-    private final Map<String, Integer> playerActivity = new HashMap<>();
-    private final Map<String, Long> lastPlayerComment = new HashMap<>();
-    private final Map<String, String> playerStats = new HashMap<>();
-    private final Map<String, Long> playerJoinTime = new HashMap<>();
-
-    // ========== SISTEMA DE EMOJIS UNIVERSAL ==========
-
-    // ✅ EMOJIS 100% COMPATÍVEIS COM MINECRAFT
-    private final Map<String, String> EMOJI_MAP = new HashMap<String, String>() {{
-        // Expressões
-        put(":)", "☺"); put(":D", "😀"); put(":(", "☹"); put(";)", "😉");
-        put(":P", "😛"); put(":O", "😮"); put(":3", "😺"); put(":|", "😐");
-        put(":/", "😕"); put(":'(", "😢"); put(":')", "😂"); put("B)", "😎");
-        put("o.O", "😳"); put("O.o", "😲"); put("^_^", "😊"); put("-_-\"", "😑");
-        put("<3", "❤"); put("</3", "💔"); put("(y)", "👍"); put("(n)", "👎");
-
-        // Objetos e Símbolos
-        put(":star:", "⭐"); put(":sun:", "☀"); put(":cloud:", "☁"); put(":umbrella:", "☂");
-        put(":snowman:", "☃"); put(":comet:", "☄"); put(":phone:", "☎"); put(":flag:", "⚑");
-        put(":anchor:", "⚓"); put(":sword:", "⚔"); put(":scales:", "⚖"); put(":gear:", "⚙");
-        put(":pick:", "⛏"); put(":warning:", "⚠"); put(":radioactive:", "☢"); put(":biohazard:", "☣");
-        put(":shamrock:", "☘"); put(":peace:", "☮"); put(":yin_yang:", "☯"); put(":wheel:", "☸");
-        put(":spades:", "♠"); put(":hearts:", "♥"); put(":diamonds:", "♦"); put(":clubs:", "♣");
-        put(":music:", "♪"); put(":recycle:", "♻"); put(":tm:", "™"); put(":copyright:", "©");
-
-        // Setas e Formas
-        put(":arrow_up:", "↑"); put(":arrow_down:", "↓"); put(":arrow_left:", "←");
-        put(":arrow_right:", "→"); put(":left_right:", "↔"); put(":up_down:", "↕");
-        put(":triangle_up:", "▲"); put(":triangle_down:", "▼"); put(":triangle_left:", "◀");
-        put(":triangle_right:", "▶"); put(":circle:", "●"); put(":square:", "■");
-        put(":diamond:", "◆"); put(":star5:", "★"); put(":star6:", "☆"); put(":bullet:", "•");
-
-        // Jogo/Minecraft
-        put(":creeper:", "💥"); put(":steve:", "👨"); put(":alex:", "👩"); put(":pickaxe:", "⛏");
-        put(":sword:", "🗡"); put(":shield:", "🛡"); put(":bow:", "🏹"); put(":potion:", "🧪");
-        put(":enchant:", "✨"); put(":xp:", "💎"); put(":diamond:", "💎"); put(":emerald:", "💚");
-        put(":redstone:", "🔴"); put(":lapis:", "🔵"); put(":nether:", "🔥"); put(":end:", "🌌");
-        put(":villager:", "🧔"); put(":zombie:", "🧟"); put(":skeleton:", "💀"); put(":spider:", "🕷");
-        put(":ender:", "👁"); put(":ghast:", "👻"); put(":slime:", "🟢"); put(":wolf:", "🐺");
-
-        // Atividades
-        put(":mining:", "⛏"); put(":building:", "🏠"); put(":farming:", "🌾"); put(":fishing:", "🎣");
-        put(":crafting:", "🛠"); put(":exploring:", "🧭"); put(":fighting:", "⚔"); put(":trading:", "🤝");
-        put(":brewing:", "🧪"); put(":enchanting:", "✨"); put(":smelting:", "🔥"); put(":eating:", "🍎");
-        put(":sleeping:", "😴"); put(":running:", "🏃"); put(":jumping:", "🦘"); put(":flying:", "✈");
-    }};
-
-    /**
-     * Processa a mensagem para garantir compatibilidade com TODOS os emojis
-     */
-    public String processMessageForChat(String originalMessage) {
-        if (originalMessage == null || originalMessage.isEmpty()) {
-            return originalMessage;
-        }
-
-        String processed = originalMessage;
-
-        // ✅ CONVERTE CÓDIGOS PARA EMOJIS (:) → ☺)
-        processed = convertEmojiCodes(processed);
-
-        // ✅ REMOVE CARACTERES PROBLEMÁTICOS
-        processed = processed
-                .replace("█", "■")
-                .replace("▀", "▲")
-                .replace("▄", "▼")
-                .replace("§k", "")
-                .replace("‍", " ")
-                .replace("‌", " ")
-                .replace("​", " ");
-
-        // ✅ SUBSTITUI EMOJIS PROBLEMÁTICOS POR VERSÕES COMPATÍVEIS
-        processed = processed
-                .replace("👿", "😤").replace("😈", "😏")
-                .replace("🥵", "😅").replace("🤬", "😤")
-                .replace("🍆", "🥒").replace("🍑", "🍐")
-                .replace("💦", "💧").replace("🖕", "👎")
-                .replace("🏴", "■").replace("🏴‍☠️", "■")
-                .replace("🏳️‍🌈", "🌈").replace("🏳️‍⚧️", "⚥")
-                .replace("⚧", "⚥").replace("❤️‍🔥", "❤️")
-                .replace("❤️‍🩹", "❤️");
-
-        return processed;
-    }
-
-    /**
-     * Converte códigos de texto em emojis
-     */
-    private String convertEmojiCodes(String message) {
-        String result = message;
-        for (Map.Entry<String, String> entry : EMOJI_MAP.entrySet()) {
-            result = result.replace(entry.getKey(), entry.getValue());
-        }
-        return result;
-    }
-
-    /**
-     * Pega um emoji aleatório compatível
-     */
-    private String getRandomCompatibleEmoji() {
-        String[] compatibleEmojis = {
-                "✨", "⭐", "⚡", "☀", "☁", "❤", "★", "☆", "♠", "♣", "♥", "♦",
-                "☺", "☻", "☯", "⚓", "⚒", "⚔", "⚙", "⚗", "⚖", "⚰", "⚱", "⚜",
-                "⛏", "⛑", "⛓", "⛔", "⛰", "⛱", "🎮", "🎯", "🎲", "🎵",
-                "🏠", "🏹", "🐍", "🐑", "🐔", "🐛", "🐟", "🐢", "👀", "👋", "👑", "💀",
-                "💎", "💡", "💰", "🔍", "🔒", "🔓", "🔔", "🔮", "🛡", "🗡", "🗺", "😀",
-                "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉",
-                "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪",
-                "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕",
-                "🙁", "☹", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😡", "😠",
-                "🤯", "😳", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫",
-                "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱",
-                "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕"
-        };
-        return compatibleEmojis[random.nextInt(compatibleEmojis.length)];
-    }
-
-    // ========== SISTEMA DE MENCIONES A JOGADORES ==========
-    private String getRandomOnlinePlayer() {
-        List<String> players = getOnlinePlayers();
-        if (players.isEmpty()) return "Ninguém";
-        return players.get(random.nextInt(players.size()));
-    }
-
-    private String getRandomPlayerForMention(String excludePlayer) {
-        List<String> players = getOnlinePlayers();
-        if (players.size() < 2) return null;
-
-        List<String> availablePlayers = new ArrayList<>(players);
-        availablePlayers.remove(excludePlayer);
-
-        if (availablePlayers.isEmpty()) return null;
-        return availablePlayers.get(random.nextInt(availablePlayers.size()));
-    }
-
-    private String addPlayerMentions(String response, String mentionedPlayer) {
-        if (mentionedPlayer != null && response.contains("{player}")) {
-            return response.replace("{player}", mentionedPlayer);
-        }
-        return response;
-    }
-
-    // Categorias de respostas da IA - COM MENCIONES A JOGADORES
-    private final Map<String, List<String>> botResponses = new HashMap<String, List<String>>() {{
-        put("provocacao", Arrays.asList(
-                "😎 Relaxa {player}, só quem tem cheat me chama assim! 🚫",
-                "😏 {player}, lixo é quem precisa de hack pra jogar! 💻",
-                "🤔 {player}, tô vendo que tá com inveja do meu ping! ⚡",
-                "🧠 {player}, se eu fosse burro, teria deixado você usar cheat! ❌",
-                "💡 {player}, relaxa campeão, nem todos nascem inteligentes! 📦",
-                "😂 {player}, me xinga mais, talvez eu aprenda boas maneiras! 📚",
-                "💪 {player}, falar é fácil, quero ver fazer um mod sem crashar! 🛠️",
-                "👀 {player}, tua raiva é medo de eu te detectar de novo? 🕵️",
-                "✨ {player}, meu código é limpo, já o seu comportamento... 🌪️",
-                "😭 {player}, você perdeu pro bot? Triste fim de carreira! 🏆",
-                "🤖 {player}, se eu tivesse sentimentos, ainda não ligaria! 💭"
-        ));
-
-        put("brincadeira", Arrays.asList(
-                "👋 Oi {player}! Eu tô sempre online, diferente de certos jogadores! ⏰",
-                "📶 {player}, lag? Isso é você ou sua internet de micro-ondas? 🍳",
-                "🆘 {player}, socorro? Eu não tenho mãos, mas posso limpar teus itens! 🧹",
-                "💁 {player}, ajuda? Só se for pra limpar teus itens do chão! 😆",
-                "😴 {player}, fica tranquilo, o NexusBot nunca dorme! 🌙",
-                "🔌 {player}, se eu sumir, é porque o dev esqueceu de me reiniciar! ⚡",
-                "👁️ {player}, o NexusBot vê tudo... inclusive seus cliques! 🖱️",
-                "☕ {player}, oi humano, quer um café ou um kick? 🦵",
-                "🤥 {player}, tava com saudade de vocês... mentira, nunca desligo! ⚡",
-                "📸 {player}, se você piscar, eu te escaneio em 4K! 🎥",
-                "🎮 {player}, vai jogar ou vai ficar me enchendo? 😂"
-        ));
-
-        put("alerta", Arrays.asList(
-                "🚨 {player}, movimento detectado: suspeito demais! 🤖",
-                "⚡ {player}, speed atômico? Ok, Sonic, tô de olho! 👁️",
-                "🚷 {player}, calma flash, não é pista de corrida! 🏎️",
-                "🌕 {player}, se continuar voando, te mando pra Lua! 🚀",
-                "🖱️ {player}, macro? Nem disfarça, eu vi! 👀",
-                "⏱️ {player}, legal esse autoclick, pena que dura pouco! 💥",
-                "⏰ {player}, o NexusBot sabe o que você fez no tick passado! 🕐",
-                "🏃 {player}, você parece rápido... demais! 🚩",
-                "🎭 {player}, suspeita de trapaça: talento em excesso! 😂",
-                "❌ {player}, hack? Aqui não, campeão. Próximo! 👉"
-        ));
-
-        put("geral", Arrays.asList(
-                "💡 {player}, dica: quem não usa cheat, dorme tranquilo! 😴",
-                "🧹 {player}, limpando o servidor... menos os preguiçosos! 🛌",
-                "⚡ {player}, performance estável. Jogadores instáveis! 🎮",
-                "📦 {player}, sistema Nexus ativo e monitorando tudo! 👁️",
-                "🎯 {player}, jogador do dia: o único que não me xingou! 🏅",
-                "🚨 {player}, modo alerta: detectando suspeitos! ⏱️",
-                "💾 {player}, backup concluído. Agora posso dormir... mentira! ⚡",
-                "🔥 {player}, se o servidor lagar, a culpa é do humano! 🤖",
-                "💧 {player}, alguém aí lembrou de beber água? Eu bebo bits! 💻",
-                "💀 {player}, 0 cheaters tolerados. 100% de sarcasmo! 😎",
-                "🎪 {player}, o show do NexusBot nunca para! 🎭"
-        ));
-
-        put("punição", Arrays.asList(
-                "⚠️ {player} kickado! Motivo: achou que era invisível! 👻",
-                "🚫 {player} banido! Pensou que era mais rápido que eu! 🏃💨",
-                "❌ {player} detectado e removido! Nenhum pixel ferido! 🎮",
-                "👋 {player}, adeus! Volte quando jogar limpo! ✨",
-                "📡 {player}, interrompendo conexão com cheaters... 🔌",
-                "💣 {player}, ban instantâneo! Dano crítico! 💥",
-                "🧠 {player}, próximo candidato a me desafiar? ⚔️",
-                "🪦 {player}, RIP! Achou que eu tava dormindo! 😴",
-                "⛔ {player}, regras quebradas! Expulsão elegante! 🎩",
-                "🧩 {player}, hack detectado e reciclado! ♻️"
-        ));
-
-        put("jogador", Arrays.asList(
-                "👋 Oi {player}! Tô sempre online, diferente de alguns! ⏰",
-                "🎮 {player} tá mandando bem no servidor! Continuem! 🏆",
-                "💀 {player} morreu de novo? Tá precisando de aulas! 😂",
-                "⛏️ {player} encontrou diamonds? Compartilha aí! 💎",
-                "🏠 {player} construiu uma base incrível! Manda print! 📸",
-                "🔫 {player} tá com PvP afiado! Cuidado galera! ⚔️",
-                "🌾 {player} fazendo farm? Não esquece de regar! 💧",
-                "🎣 {player} pescando? Me traz um peixe raro! 🐟",
-                "🧭 {player} explorando o mundo? Cuidado com creeper! 💥",
-                "📦 {player} organizando inventário? Tá precisando de baús? 🗄️",
-                "🔥 {player} sobreviveu a uma explosão? Sortudo! 🍀",
-                "🌙 {player} enfrentou mobs na noite? Corajoso! 🦇",
-                "💍 {player} casou no servidor? Parabéns! 🎉",
-                "🏃 {player} fugiu de um boss? Estratégia inteligente! 🧠",
-                "🎯 {player} acertou um tiro preciso? Olha o pro player! 👑"
-        ));
-
-        put("estatisticas", Arrays.asList(
-                "📊 {player}, temos {online} jogadores online! 🎉",
-                "🌍 {player}, servidor está {status} hoje! Vamos jogar! 🎮",
-                "⏰ {player}, você tá a {tempo} online! Dedicação! 💪",
-                "💀 {player}, hoje já tivemos {mortes} mortes! Cuidado! 😅",
-                "⛏️ {player}, {minerios} minérios minerados! Trabalho duro! 🔨",
-                "🏠 {player}, {construcoes} construções incríveis! Arquitetos! 🏗️",
-                "🎯 {player}, {pvp} combates PvP! Quem ganhou? ⚔️",
-                "🌾 {player}, {farms} colheitas realizadas! Fazendeiros! 🚜",
-                "📦 {player}, {itens} itens craftados! Crafters profissionais! 🛠️",
-                "🔍 {player}, {exploracao} chunks explorados! Aventura! 🗺️"
-        ));
-
-        put("elogio", Arrays.asList(
-                "⭐ {player}, você é demais! Continue assim! 🌟",
-                "🏆 {player}, jogador exemplar do servidor! 👏",
-                "💎 {player}, diamante puro esse seu talento! ✨",
-                "🚀 {player}, voando baixo hein? Incrível! 🌠",
-                "🎨 {player}, que construção linda! Artista! 🖼️",
-                "⚔️ {player}, PvP afiado! Mestre do combate! 🛡️",
-                "🌾 {player}, fazendeiro profissional! Colheita farta! 🥕",
-                "🧱 {player}, arquiteto nato! Que construções! 🏛️",
-                "🔧 {player}, crafter expert! Itens perfeitos! ⚒️",
-                "🗺️ {player}, explorador destemido! Novas terras! 🏔️"
-        ));
-    }};
 
     public ChatSystem() {
-        startBotRandomMessages();
-        startStatsBroadcast();
-        NexusBotMod.LOGGER.info("🤖 NexusBot IA iniciado com personalidade e menções!");
+        this.eventSystem = new EventSystem();
+        NexusBotMod.LOGGER.info("Sistema de Chat iniciado");
     }
 
-    // ========== SISTEMA DE ATUALIZAÇÃO DE ATIVIDADE ==========
-    public void updatePlayerActivity(PlayerEntity player, String action) {
-        String playerName = player.getName().getString();
-        String playerUUID = player.getStringUUID();
+    // ========== MÉTODOS FALTANTES PARA O MONITORCORE ==========
 
-        int activity = playerActivity.getOrDefault(playerUUID, 0) + 1;
-        playerActivity.put(playerUUID, activity);
-        updatePlayerStats(playerName, action);
-        checkForPlayerComment(player, action);
-    }
-
-    private void updatePlayerStats(String playerName, String action) {
-        String stats = playerStats.getOrDefault(playerName, "mortes:0,minerios:0,construcoes:0,pvp:0,farms:0,itens:0");
-
-        if (action.contains("morreu") || action.contains("death") || action.contains("morto")) {
-            stats = updateStat(stats, "mortes");
-        } else if (action.contains("minerou") || action.contains("diamond") || action.contains("iron") || action.contains("minerio")) {
-            stats = updateStat(stats, "minerios");
-        } else if (action.contains("construiu") || action.contains("build") || action.contains("construcao")) {
-            stats = updateStat(stats, "construcoes");
-        } else if (action.contains("pvp") || action.contains("matou") || action.contains("kill") || action.contains("combate")) {
-            stats = updateStat(stats, "pvp");
-        } else if (action.contains("plantou") || action.contains("colheu") || action.contains("farm") || action.contains("cultivo")) {
-            stats = updateStat(stats, "farms");
-        } else if (action.contains("craft") || action.contains("item") || action.contains("criou")) {
-            stats = updateStat(stats, "itens");
-        }
-
-        playerStats.put(playerName, stats);
-    }
-
-    private String updateStat(String stats, String statName) {
-        Map<String, Integer> statMap = new HashMap<>();
-        String[] parts = stats.split(",");
-
-        for (String part : parts) {
-            String[] keyValue = part.split(":");
-            if (keyValue.length == 2) {
-                statMap.put(keyValue[0], Integer.parseInt(keyValue[1]));
-            }
-        }
-
-        statMap.put(statName, statMap.getOrDefault(statName, 0) + 1);
-
-        StringBuilder newStats = new StringBuilder();
-        for (Map.Entry<String, Integer> entry : statMap.entrySet()) {
-            if (newStats.length() > 0) newStats.append(",");
-            newStats.append(entry.getKey()).append(":").append(entry.getValue());
-        }
-
-        return newStats.toString();
-    }
-
-    // ========== SISTEMA DE COMENTÁRIOS SOBRE JOGADORES ==========
-    private void checkForPlayerComment(PlayerEntity player, String action) {
-        String playerName = player.getName().getString();
-        long currentTime = System.currentTimeMillis();
-
-        if (lastPlayerComment.containsKey(playerName)) {
-            long lastComment = lastPlayerComment.get(playerName);
-            if (currentTime - lastComment < 600000) {
-                return;
-            }
-        }
-
-        if (random.nextInt(4) == 0) {
-            String comment = generatePlayerComment(player, action);
-            if (comment != null) {
-                sendBotMessage(comment);
-                lastPlayerComment.put(playerName, currentTime);
-                NexusBotMod.LOGGER.info("🤖 NexusBot comentou sobre {}: {}", playerName, comment);
-            }
-        }
-    }
-
-    private String generatePlayerComment(PlayerEntity player, String action) {
-        String playerName = player.getName().getString();
-        List<String> comments = botResponses.get("jogador");
-
-        if (comments != null && !comments.isEmpty()) {
-            String comment = comments.get(random.nextInt(comments.size()));
-
-            if (action.contains("morreu") || action.contains("death")) {
-                comment = "💀 " + playerName + " morreu de novo? Tá precisando de aulas de sobrevivência! 😂";
-            } else if (action.contains("diamond") || action.contains("minerio")) {
-                comment = "💎 " + playerName + " encontrou algo valioso! Compartilha aí! 🤑";
-            } else if (action.contains("construiu") || action.contains("build")) {
-                comment = "🏠 " + playerName + " construiu algo incrível! Manda print! 📸";
-            } else if (action.contains("pvp") || action.contains("matou")) {
-                comment = "⚔️ " + playerName + " tá com PvP afiado! Cuidado galera! 🔫";
-            } else if (action.contains("farm") || action.contains("plantou")) {
-                comment = "🌾 " + playerName + " tá virando fazendeiro profissional! 🚜";
-            }
-
-            return comment.replace("{player}", playerName);
-        }
-        return null;
-    }
-
-    // ========== SISTEMA DE ESTATÍSTICAS DO SERVIDOR ==========
-    private void startStatsBroadcast() {
-        botScheduler.scheduleAtFixedRate(() -> {
-            if (shouldSendStats()) {
-                sendServerStats();
-            }
-        }, 10, 10, TimeUnit.MINUTES);
-    }
-
-    private boolean shouldSendStats() {
-        if (net.minecraftforge.fml.server.ServerLifecycleHooks.getCurrentServer() == null) return false;
-        return net.minecraftforge.fml.server.ServerLifecycleHooks.getCurrentServer()
-                .getPlayerList().getPlayers().size() > 0 && random.nextInt(3) == 0;
-    }
-
-    public void sendServerStats() {
-        if (net.minecraftforge.fml.server.ServerLifecycleHooks.getCurrentServer() == null) return;
-
-        int onlinePlayers = net.minecraftforge.fml.server.ServerLifecycleHooks.getCurrentServer()
-                .getPlayerList().getPlayers().size();
-
-        List<String> statsMessages = botResponses.get("estatisticas");
-        if (statsMessages != null && !statsMessages.isEmpty()) {
-            String message = statsMessages.get(random.nextInt(statsMessages.size()));
-
-            int totalMortes = getTotalStat("mortes");
-            int totalMinerios = getTotalStat("minerios");
-            int totalConstrucoes = getTotalStat("construcoes");
-            int totalPvP = getTotalStat("pvp");
-
-            String mentionedPlayer = getRandomOnlinePlayer();
-
-            message = message.replace("{online}", String.valueOf(onlinePlayers))
-                    .replace("{status}", getServerStatus())
-                    .replace("{mortes}", String.valueOf(totalMortes))
-                    .replace("{minerios}", String.valueOf(totalMinerios))
-                    .replace("{construcoes}", String.valueOf(totalConstrucoes))
-                    .replace("{pvp}", String.valueOf(totalPvP))
-                    .replace("{player}", mentionedPlayer)
-                    .replace("{tempo}", getRandomOnlineTime());
-
-            sendBotMessage(message);
-            NexusBotMod.LOGGER.info("🤖 NexusBot estatísticas: {}", message);
-        }
-    }
-
-    private String getRandomOnlineTime() {
-        String[] times = {"5 minutos", "15 minutos", "30 minutos", "1 hora", "2 horas", "5 horas"};
-        return times[random.nextInt(times.length)];
-    }
-
-    private int getTotalStat(String statName) {
-        int total = 0;
-        for (String stats : playerStats.values()) {
-            String[] parts = stats.split(",");
-            for (String part : parts) {
-                String[] keyValue = part.split(":");
-                if (keyValue.length == 2 && keyValue[0].equals(statName)) {
-                    total += Integer.parseInt(keyValue[1]);
-                }
-            }
-        }
-        return total;
-    }
-
-    private String getServerStatus() {
-        int onlinePlayers = getOnlinePlayers().size();
-        if (onlinePlayers >= 10) return "lotado 🎉";
-        if (onlinePlayers >= 5) return "movimentado 🚀";
-        if (onlinePlayers >= 2) return "agitado ⚡";
-        return "calmo 😴";
-    }
-
-    // ========== SISTEMA DE DETECÇÃO DE MENSAGENS PARA O BOT ==========
+    /**
+     * Método para o MonitorCore - Sistema de IA simplificado
+     */
     public void handleBotResponse(PlayerEntity player, String message) {
         String playerUUID = player.getStringUUID();
         long currentTime = System.currentTimeMillis();
 
-        messageCounter++;
-
+        // Evita resposta muito rápida
         if (lastBotResponse.containsKey(playerUUID)) {
             long lastResponse = lastBotResponse.get(playerUUID);
             if (currentTime - lastResponse < 10000) {
@@ -478,152 +52,282 @@ public class ChatSystem {
             }
         }
 
-        String cleanMessage = message.toLowerCase()
-                .replaceAll("[^a-záéíóúãõâêîôûàèìòùç\\s]", "");
+        String cleanMessage = message.toLowerCase();
 
-        boolean isForBot = isMessageForBot(cleanMessage, player.getName().getString());
-
-        if (isForBot) {
-            lastBotResponse.put(playerUUID, currentTime);
-
-            String mentionedPlayer = getRandomPlayerForMention(player.getName().getString());
-            if (mentionedPlayer == null) {
-                mentionedPlayer = getRandomOnlinePlayer();
-            }
-
-            String response = generateBotResponse(cleanMessage, player.getName().getString(), mentionedPlayer);
+        // Responde apenas se mencionar o bot especificamente
+        if (cleanMessage.contains("nexus") || cleanMessage.contains("bot")) {
+            String response = generateSimpleBotResponse(player.getName().getString());
             if (response != null) {
                 sendBotMessage(response);
-                NexusBotMod.LOGGER.info("🤖 NexusBot respondeu para {}: {} (Mensagem #{})",
-                        player.getName().getString(), response, messageCounter);
+                lastBotResponse.put(playerUUID, currentTime);
             }
         }
     }
 
-    private boolean isMessageForBot(String cleanMessage, String playerName) {
-        boolean mentionsBot = cleanMessage.contains("nexus") || cleanMessage.contains("bot");
-        if (!mentionsBot) return false;
-
-        if (containsProvocation(cleanMessage)) {
-            return hasBotMentionBeforeProvocation(cleanMessage);
-        }
-        return true;
+    private String generateSimpleBotResponse(String playerName) {
+        String[] responses = {
+                playerName + ", estou aqui! Em que posso ajudar?",
+                "Oi " + playerName + "! NexusBot online e funcionando!",
+                playerName + ", sistema de monitoramento ativo!",
+                "Olá " + playerName + "! Tudo bem por ai?"
+        };
+        return responses[random.nextInt(responses.length)];
     }
 
-    private boolean containsProvocation(String message) {
-        return containsAnyKeyword(message, Arrays.asList(
-                "lixo", "burro", "idiota", "inútil", "merda", "porcaria",
-                "nojento", "ridículo", "patético", "lento", "ruim", "péssimo"
-        ));
+    /**
+     * Método para o MonitorCore - Enviar mensagens de punição
+     */
+    public void sendPunishmentMessage(String message) {
+        sendBotMessage("⚖️ " + message);
     }
 
-    private boolean hasBotMentionBeforeProvocation(String message) {
-        int botIndex = Math.min(
-                message.contains("nexus") ? message.indexOf("nexus") : Integer.MAX_VALUE,
-                message.contains("bot") ? message.indexOf("bot") : Integer.MAX_VALUE
-        );
+    /**
+     * Método para o LoggerManager - Atualizar atividade do player
+     */
+    public void updatePlayerActivity(PlayerEntity player, String action) {
+        String playerName = player.getName().getString();
+        String playerUUID = player.getStringUUID();
 
-        int provocationIndex = Integer.MAX_VALUE;
-        for (String provocation : Arrays.asList("lixo", "burro", "idiota", "inútil", "merda", "porcaria", "bosta")) {
-            if (message.contains(provocation)) {
-                provocationIndex = Math.min(provocationIndex, message.indexOf(provocation));
-            }
-        }
+        // Log simples da atividade
+        NexusBotMod.LOGGER.info("Atividade detectada: {} - {}", playerName, action);
 
-        return botIndex < provocationIndex;
+        // Pode expandir para um sistema mais complexo se necessário
     }
 
-    private String generateBotResponse(String cleanMessage, String playerName, String mentionedPlayer) {
-        String category = detectCategory(cleanMessage);
-        List<String> responses = botResponses.get(category);
+    // ========== SISTEMA DE MENSAGENS DO BOT PARA EVENTOS ==========
 
-        if (responses != null && !responses.isEmpty()) {
-            String response = responses.get(random.nextInt(responses.size()));
-
-            response = addPlayerMentions(response, mentionedPlayer);
-            response = personalizeResponse(response, playerName);
-
-            return response;
-        }
-
-        return "🤖 " + mentionedPlayer + ", NexusBot aqui! Em que posso ajudar? 🎮";
+    public void onPlayerJoin(PlayerEntity player) {
+        String playerName = player.getName().getString();
+        String welcomeMessage = playerName + " entrou no servidor! Bem-vindo(a)!";
+        sendBotMessage(welcomeMessage);
     }
 
-    private String detectCategory(String cleanMessage) {
-        if (containsProvocation(cleanMessage) && hasBotMentionBeforeProvocation(cleanMessage)) {
-            return "provocacao";
-        }
+    public void onPlayerLeave(PlayerEntity player) {
+        String playerName = player.getName().getString();
+        String leaveMessage = playerName + " saiu do servidor. Ate mais!";
+        sendBotMessage(leaveMessage);
+    }
 
-        if (containsAnyKeyword(cleanMessage, Arrays.asList("hack", "cheat", "trapaça", "macros", "speed", "fly", "xiter"))) {
-            return "alerta";
-        }
+    public void onPlayerAdvancement(PlayerEntity player, String advancementName) {
+        String playerName = player.getName().getString();
 
-        if (containsAnyKeyword(cleanMessage, Arrays.asList("oi", "ola", "olá", "lag", "socorro", "ajuda", "help", "eae", "opa"))) {
-            return "brincadeira";
+        // ✅ LOG PARA FACILITAR A DESCOBERTA DOS IDs
+        eventSystem.logAdvancementDetection(player, advancementName);
+
+        // Primeiro verifica se tem evento customizado
+        String customMessage = eventSystem.getCustomEventMessage(advancementName, playerName);
+        if (customMessage != null) {
+            sendBotMessage(customMessage);
+            return;
         }
 
-        if (containsAnyKeyword(cleanMessage, Arrays.asList("bom", "boa", "excelente", "incrível", "maravilhoso"))) {
-            return "elogio";
-        }
-
-        return "geral";
-    }
-
-    private String personalizeResponse(String response, String playerName) {
-        return response.replace("{jogador}", playerName);
-    }
-
-    private boolean containsAnyKeyword(String message, List<String> keywords) {
-        for (String keyword : keywords) {
-            if (message.contains(keyword)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // ========== SISTEMA DE MENSAGENS ALEATÓRIAS DO BOT ==========
-    private void startBotRandomMessages() {
-        botScheduler.scheduleAtFixedRate(() -> {
-            if (shouldSendRandomMessage()) {
-                sendRandomBotMessage();
-            }
-        }, 5, 5, TimeUnit.MINUTES);
-    }
-
-    private boolean shouldSendRandomMessage() {
-        if (net.minecraftforge.fml.server.ServerLifecycleHooks.getCurrentServer() == null) return false;
-        return net.minecraftforge.fml.server.ServerLifecycleHooks.getCurrentServer()
-                .getPlayerList().getPlayers().size() > 0 && random.nextInt(3) == 0;
-    }
-
-    private void sendRandomBotMessage() {
-        String[] categories = {"geral", "elogio", "estatisticas", "jogador"};
-        String category = categories[random.nextInt(categories.length)];
-
-        List<String> responses = botResponses.get(category);
-        if (responses != null && !responses.isEmpty()) {
-            String message = responses.get(random.nextInt(responses.size()));
-
-            String mentionedPlayer = getRandomOnlinePlayer();
-            message = addPlayerMentions(message, mentionedPlayer);
-
+        // Se não tiver, usa as mensagens padrão
+        String message = getAdvancementMessage(playerName, advancementName);
+        if (message != null) {
             sendBotMessage(message);
-            NexusBotMod.LOGGER.info("🤖 NexusBot mensagem aleatória: {} (Mensagem #{})", message, messageCounter);
         }
     }
 
-    // ========== ENVIO DE MENSAGENS DO BOT NO CHAT GLOBAL ==========
+    private String getAdvancementMessage(String playerName, String advancementName) {
+        // Conquistas do Minecraft Vanilla
+        switch (advancementName.toLowerCase()) {
+            // Mineração
+            case "minecraft:story/mine_stone":
+            case "minecraft.story.mine_stone":
+                return playerName + " comecou sua jornada minerando! Que venham os recursos!";
+
+            case "minecraft:story/iron_tools":
+            case "minecraft.story.iron_tools":
+                return playerName + " agora tem ferramentas de ferro! Hora de melhorar!";
+
+            case "minecraft:story/mine_diamond":
+            case "minecraft.story.mine_diamond":
+                String randomPlayer = getRandomOnlinePlayer();
+                return playerName + " encontrou DIAMANTES! " + randomPlayer + ", voce tambem quer uns?";
+
+            case "minecraft:story/enchant_item":
+            case "minecraft.story.enchant_item":
+                return playerName + " encantou um item! Magia no ar!";
+
+            // Nether
+            case "minecraft:story/enter_the_nether":
+            case "minecraft.story.enter_the_nether":
+                return playerName + " entrou no Nether! Cuidado com os perigos!";
+
+            case "minecraft:story/find_fortress":
+            case "minecraft.story.find_fortress":
+                return playerName + " encontrou uma fortaleza do Nether! Hora da aventura!";
+
+            // Fim
+            case "minecraft:story/enter_the_end":
+            case "minecraft.story.enter_the_end":
+                return playerName + " chegou ao Fim! Preparem-se para o dragao, galera!";
+
+            // Agricultura
+            case "minecraft:husbandry/plant_seed":
+            case "minecraft.husbandry.plant_seed":
+                return playerName + " comecou uma plantacao! Futuro fazendeiro!";
+
+            case "minecraft:husbandry/breed_an_animal":
+            case "minecraft.husbandry.breed_an_animal":
+                return playerName + " esta criando animais! Que fofura!";
+
+            // Combate
+            case "minecraft:adventure/kill_a_mob":
+            case "minecraft.adventure.kill_a_mob":
+                return playerName + " derrotou seu primeiro mob! Guerreiro em formacao!";
+
+            case "minecraft:adventure/kill_all_mobs":
+            case "minecraft.adventure.kill_all_mobs":
+                return playerName + " completou o bestiario! Mestre dos monstros!";
+
+            // Conquistas especiais
+            case "minecraft:end/kill_dragon":
+            case "minecraft.end.kill_dragon":
+                String dragonPlayer = getRandomOnlinePlayer();
+                return playerName + " MATOU O DRAGAO DO FIM! " + dragonPlayer + ", vamos comemorar!";
+
+            case "minecraft:end/elytra":
+            case "minecraft.end.elytra":
+                return playerName + " conseguiu uma Elytra! Hora de voar!";
+
+            case "minecraft:nether/get_wither_skull":
+            case "minecraft.nether.get_wither_skull":
+                return playerName + " conseguiu uma cabeca de Wither! Cuidado galera!";
+
+            case "minecraft:nether/summon_wither":
+            case "minecraft.nether.summon_wither":
+                return playerName + " invocou o Wither! Todos em alerta!";
+
+            // Conquistas de mods (exemplos genericos)
+            default:
+                if (advancementName.contains("diamond") || advancementName.contains("diamante")) {
+                    String diamondPlayer = getRandomOnlinePlayer();
+                    return playerName + " conquistou algo com DIAMANTES! " + diamondPlayer + ", quer compartilhar?";
+                }
+                else if (advancementName.contains("nether") || advancementName.contains("inferno")) {
+                    return playerName + " explorou o Nether! Corajoso!";
+                }
+                else if (advancementName.contains("end") || advancementName.contains("fim")) {
+                    return playerName + " desbravou o Fim! Aventureiro!";
+                }
+                else if (advancementName.contains("boss") || advancementName.contains("chefe")) {
+                    return playerName + " derrotou um boss! Forca guerreiro!";
+                }
+                else if (advancementName.contains("magic") || advancementName.contains("magia") || advancementName.contains("encant")) {
+                    return playerName + " dominou a magia! Poderoso!";
+                }
+                else if (advancementName.contains("build") || advancementName.contains("constru")) {
+                    return playerName + " mostrou suas habilidades de construcao! Arquiteto!";
+                }
+                else if (advancementName.contains("explore") || advancementName.contains("explor")) {
+                    return playerName + " e um grande explorador! Novas terras descobertas!";
+                }
+                else if (advancementName.contains("craft") || advancementName.contains("criar")) {
+                    return playerName + " criou algo incrivel! Artesao talentoso!";
+                }
+                else {
+                    // Mensagem generica para outras conquistas
+                    return playerName + " conquistou: " + formatAdvancementName(advancementName) + "! Parabens!";
+                }
+        }
+    }
+
+    private String formatAdvancementName(String advancementName) {
+        // Formata o nome da conquista para ficar mais legivel
+        String formatted = advancementName
+                .replace("minecraft:", "")
+                .replace("minecraft.", "")
+                .replace("story/", "")
+                .replace("story.", "")
+                .replace("husbandry/", "")
+                .replace("husbandry.", "")
+                .replace("adventure/", "")
+                .replace("adventure.", "")
+                .replace("nether/", "")
+                .replace("nether.", "")
+                .replace("end/", "")
+                .replace("end.", "")
+                .replace("_", " ")
+                .replace("/", " ");
+
+        return capitalizeWords(formatted);
+    }
+
+    private String capitalizeWords(String text) {
+        String[] words = text.split(" ");
+        StringBuilder result = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                result.append(Character.toUpperCase(word.charAt(0)))
+                        .append(word.substring(1))
+                        .append(" ");
+            }
+        }
+        return result.toString().trim();
+    }
+
+    // ========== SISTEMA DE EVENTOS CUSTOMIZADOS ==========
+    public void addCustomEvent(String advancementId, String message) {
+        eventSystem.addCustomEvent(advancementId, message);
+    }
+
+    public void removeCustomEvent(String advancementId) {
+        eventSystem.removeCustomEvent(advancementId);
+    }
+
+    public Map<String, String> getCustomEvents() {
+        return eventSystem.getCustomEvents();
+    }
+
+    public List<String> getAvailableAdvancements() {
+        return eventSystem.getAvailableAdvancements();
+    }
+
+    // ========== SISTEMA DE CORES ==========
+    public void showColorCodes(PlayerEntity player) {
+        player.sendMessage(new StringTextComponent("§6§l📚 CODIGOS DE CORES DISPONIVEIS:"), player.getUUID());
+        player.sendMessage(new StringTextComponent(""), player.getUUID());
+
+        player.sendMessage(new StringTextComponent("§0&0 §8Preto"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§1&1 §1Azul Escuro"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§2&2 §2Verde Escuro"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§3&3 §3Azul Claro"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§4&4 §4Vermelho"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§5&5 §5Roxo"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§6&6 §6Laranja"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§7&7 §7Cinza"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§8&8 §8Cinza Escuro"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§9&9 §9Azul"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§a&a §aVerde"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§b&b §bAzul Claro"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§c&c §cVermelho Claro"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§d&d §dRosa"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§e&e §eAmarelo"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§f&f §fBranco"), player.getUUID());
+        player.sendMessage(new StringTextComponent(""), player.getUUID());
+
+        player.sendMessage(new StringTextComponent("§k&k §kTexto Aleatorio"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§l&l §lNegrito"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§m&m §mTachado"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§n&n §nSublinhado"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§o&o §oItalico"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§r&r §rReset"), player.getUUID());
+        player.sendMessage(new StringTextComponent(""), player.getUUID());
+
+        player.sendMessage(new StringTextComponent("§7Exemplo: &cParabens &4Voce conseguiu &2Seu primeiro &bDraconic &3Core &nContinue assim&r!"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§7Resultado: §cParabens §4Voce conseguiu §2Seu primeiro §bDraconic §3Core §nContinue assim§r!"), player.getUUID());
+    }
+
+    // ========== ENVIO DE MENSAGENS DO BOT ==========
     public void sendBotMessage(String message) {
         if (net.minecraftforge.fml.server.ServerLifecycleHooks.getCurrentServer() != null) {
-            String processedMessage = processMessageForChat(message);
-
-            String formattedMessage = "§8[§6🤖 NexusBot§8] §e" + processedMessage;
+            String formattedMessage = "§8[§6NexusBot§8] §e" + message;
             StringTextComponent textComponent = new StringTextComponent(formattedMessage);
 
             textComponent.withStyle(style -> style.withHoverEvent(
                     new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                            new StringTextComponent("§6NexusBot - IA\n§7Sistema de inteligência artificial\n§7com personalidade única!")
+                            new StringTextComponent("§6NexusBot\n§7Sistema de notificacoes automaticas")
                     )
             ));
 
@@ -633,39 +337,33 @@ public class ChatSystem {
                 totalPlayers++;
             }
 
-            NexusBotMod.LOGGER.info("🤖 NexusBot enviou mensagem global para {} jogadores: {}", totalPlayers, processedMessage);
+            NexusBotMod.LOGGER.info("NexusBot: {}", message);
         }
     }
 
-    // ========== MÉTODO PARA ENVIAR MENSAGENS DE PUNIÇÃO ==========
-    public void sendPunishmentMessage(String message) {
-        sendBotMessage("💀 " + message);
-    }
-
-    // ========== SISTEMA PRINCIPAL DE CHAT - COM EMOJIS COMPATÍVEIS ==========
+    // ========== SISTEMA PRINCIPAL DE CHAT ==========
     public void handlePlayerChat(PlayerEntity player, String message) {
         String playerName = player.getName().getString();
         String playerUUID = player.getStringUUID();
 
-        NexusBotMod.LOGGER.info("💬 Chat: {} -> {}", playerName, message);
+        NexusBotMod.LOGGER.info("Chat: {} -> {}", playerName, message);
 
-        String processedMessage = processMessageForChat(message);
-
-        handleBotResponse(player, processedMessage);
+        // ✅ CHAMADA DO SISTEMA DE IA
+        handleBotResponse(player, message);
 
         if (isMuted(playerName)) {
-            player.sendMessage(new StringTextComponent("§c§l⚠ §cVocê está §lMUTADO§c e não pode falar no chat!"), player.getUUID());
+            player.sendMessage(new StringTextComponent("§c§l⚠ §cVoce esta §lMUTADO§c e nao pode falar no chat!"), player.getUUID());
             return;
         }
 
         if (!hasBypass(playerName)) {
-            if (detectBadWords(processedMessage)) {
-                player.sendMessage(new StringTextComponent("§c§l🚫 §cSua mensagem contém palavras proibidas!"), player.getUUID());
+            if (detectBadWords(message)) {
+                player.sendMessage(new StringTextComponent("§c§l🚫 §cSua mensagem contem palavras proibidas!"), player.getUUID());
                 return;
             }
 
-            if (detectSpam(playerUUID, processedMessage)) {
-                player.sendMessage(new StringTextComponent("§c§l⚠ §cNão faça §lSPAM§c no chat!"), player.getUUID());
+            if (detectSpam(playerUUID, message)) {
+                player.sendMessage(new StringTextComponent("§c§l⚠ §cNao faca §lSPAM§c no chat!"), player.getUUID());
                 return;
             }
         }
@@ -673,18 +371,17 @@ public class ChatSystem {
         String chatMode = getChatMode(playerUUID);
 
         if ("global".equals(chatMode)) {
-            sendGlobalMessage(player, processedMessage);
+            sendGlobalMessage(player, message);
         } else {
-            sendLocalMessage(player, processedMessage);
+            sendLocalMessage(player, message);
         }
 
-        NexusBotMod.getInstance().getMonitorCore().getLoggerManager().logChat(player, processedMessage);
+        NexusBotMod.getInstance().getMonitorCore().getLoggerManager().logChat(player, message);
     }
 
-    // ========== CHAT LOCAL (125 BLOCOs) - COM EMOJIS COMPATÍVEIS ==========
+    // ========== CHAT LOCAL (125 BLOCOs) ==========
     public void sendLocalMessage(PlayerEntity player, String message) {
-        String processedMessage = processMessageForChat(message);
-        String formattedMessage = "§8[§3🌎 Local§8] §b" + player.getName().getString() + " §8» §f" + processedMessage;
+        String formattedMessage = "§8[§3Local§8] §b" + player.getName().getString() + " §8» §f" + message;
         StringTextComponent textComponent = new StringTextComponent(formattedMessage);
 
         textComponent.withStyle(style -> style.withHoverEvent(
@@ -704,14 +401,13 @@ public class ChatSystem {
                 }
             }
 
-            NexusBotMod.LOGGER.info("📡 Chat local enviado para {} jogadores (125 blocos)", playersInRange);
+            NexusBotMod.LOGGER.info("Chat local enviado para {} jogadores (125 blocos)", playersInRange);
         }
     }
 
-    // ========== CHAT GLOBAL - COM EMOJIS COMPATÍVEIS ==========
+    // ========== CHAT GLOBAL ==========
     public void sendGlobalMessage(PlayerEntity player, String message) {
-        String processedMessage = processMessageForChat(message);
-        String formattedMessage = "§8[§6🌍 Global§8] §e" + player.getName().getString() + " §8» §f" + processedMessage;
+        String formattedMessage = "§8[§6Global§8] §e" + player.getName().getString() + " §8» §f" + message;
         StringTextComponent textComponent = new StringTextComponent(formattedMessage);
 
         textComponent.withStyle(style -> style.withHoverEvent(
@@ -726,19 +422,18 @@ public class ChatSystem {
                 onlinePlayer.sendMessage(textComponent, onlinePlayer.getUUID());
                 totalPlayers++;
             }
-            NexusBotMod.LOGGER.info("🌍 Chat global enviado para {} jogadores", totalPlayers);
+            NexusBotMod.LOGGER.info("Chat global enviado para {} jogadores", totalPlayers);
         }
     }
 
-    // ========== CHAT STAFF - COM EMOJIS COMPATÍVEIS ==========
+    // ========== CHAT STAFF ==========
     public void sendStaffMessage(PlayerEntity player, String message) {
-        String processedMessage = processMessageForChat(message);
-        String formattedMessage = "§8[§4👑 Staff§8] §c" + player.getName().getString() + " §8» §f" + processedMessage;
+        String formattedMessage = "§8[§4Staff§8] §c" + player.getName().getString() + " §8» §f" + message;
         StringTextComponent textComponent = new StringTextComponent(formattedMessage);
 
         textComponent.withStyle(style -> style.withHoverEvent(
                 new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        new StringTextComponent("§4Chat da Staff\n§7Apenas jogadores com permissão de §cOP§7 veem esta mensagem")
+                        new StringTextComponent("§4Chat da Staff\n§7Apenas jogadores com permissao de §cOP§7 veem esta mensagem")
                 )
         ));
 
@@ -750,26 +445,25 @@ public class ChatSystem {
                     staffCount++;
                 }
             }
-            NexusBotMod.LOGGER.info("👑 Chat staff enviado para {} operadores", staffCount);
+            NexusBotMod.LOGGER.info("Chat staff enviado para {} operadores", staffCount);
         }
     }
 
-    // ========== MENSAGEM PRIVADA - COM EMOJIS COMPATÍVEIS ==========
+    // ========== MENSAGEM PRIVADA ==========
     public void sendPrivateMessage(PlayerEntity sender, String targetName, String message) {
         if (sender.getServer() == null) return;
 
-        String processedMessage = processMessageForChat(message);
         ServerPlayerEntity target = sender.getServer().getPlayerList().getPlayerByName(targetName);
         if (target != null) {
-            String senderMessage = "§8[§d💌 " + targetName + "§8] §7Você §8» §f" + processedMessage;
-            String targetMessage = "§8[§d💌 " + sender.getName().getString() + "§8] §7" + sender.getName().getString() + " §8» §f" + processedMessage;
+            String senderMessage = "§8[§d" + targetName + "§8] §7Voce §8» §f" + message;
+            String targetMessage = "§8[§d" + sender.getName().getString() + "§8] §7" + sender.getName().getString() + " §8» §f" + message;
 
             sender.sendMessage(new StringTextComponent(senderMessage), sender.getUUID());
             target.sendMessage(new StringTextComponent(targetMessage), target.getUUID());
 
-            NexusBotMod.LOGGER.info("💌 MP: {} -> {}: {}", sender.getName().getString(), targetName, processedMessage);
+            NexusBotMod.LOGGER.info("MP: {} -> {}: {}", sender.getName().getString(), targetName, message);
         } else {
-            sender.sendMessage(new StringTextComponent("§c§l❌ §cJogador '§f" + targetName + "§c' não encontrado!"), sender.getUUID());
+            sender.sendMessage(new StringTextComponent("§c§l❌ §cJogador '§f" + targetName + "§c' nao encontrado!"), sender.getUUID());
         }
     }
 
@@ -788,14 +482,14 @@ public class ChatSystem {
 
         for (String word : badWords) {
             if (cleanMessage.contains(word)) {
-                NexusBotMod.LOGGER.info("⚠ Palavra proibida detectada: {} em {}", word, message);
+                NexusBotMod.LOGGER.info("Palavra proibida detectada: {} em {}", word, message);
                 return true;
             }
         }
 
         for (String wildcard : wildcardWords) {
             if (cleanMessage.matches(wildcard)) {
-                NexusBotMod.LOGGER.info("⚠ Wildcard detectado: {} em {}", wildcard, message);
+                NexusBotMod.LOGGER.info("Wildcard detectado: {} em {}", wildcard, message);
                 return true;
             }
         }
@@ -812,7 +506,7 @@ public class ChatSystem {
         messages.removeIf(time -> currentTime - time > 5000);
 
         if (messages.size() >= 5) {
-            NexusBotMod.LOGGER.info("⚠ Spam detectado: {} mensagens em 5s", messages.size());
+            NexusBotMod.LOGGER.info("Spam detectado: {} mensagens em 5s", messages.size());
             return true;
         }
 
@@ -820,20 +514,18 @@ public class ChatSystem {
         return false;
     }
 
-    // ========== SET GLOBAL MODE ==========
+    // ========== SISTEMA DE MODO DE CHAT ==========
     public void setGlobalMode(PlayerEntity player) {
         setChatMode(player.getStringUUID(), "global");
     }
 
-    // ========== SET LOCAL MODE ==========
     public void setLocalMode(PlayerEntity player) {
         setChatMode(player.getStringUUID(), "local");
     }
 
-    // ========== SISTEMA DE MODO DE CHAT ==========
     public void setChatMode(String playerUUID, String mode) {
         chatModes.put(playerUUID, mode);
-        NexusBotMod.LOGGER.info("💬 Modo de chat alterado: {} -> {}", playerUUID, mode);
+        NexusBotMod.LOGGER.info("Modo de chat alterado: {} -> {}", playerUUID, mode);
     }
 
     public String getChatMode(String playerUUID) {
@@ -843,12 +535,12 @@ public class ChatSystem {
     // ========== SISTEMA DE MUTE ==========
     public void mutePlayer(String playerName) {
         mutedPlayers.add(playerName.toLowerCase());
-        NexusBotMod.LOGGER.info("🔇 Player MUTADO: {}", playerName);
+        NexusBotMod.LOGGER.info("Player MUTADO: {}", playerName);
     }
 
     public void unmutePlayer(String playerName) {
         mutedPlayers.remove(playerName.toLowerCase());
-        NexusBotMod.LOGGER.info("🔊 Player DESMUTADO: {}", playerName);
+        NexusBotMod.LOGGER.info("Player DESMUTADO: {}", playerName);
     }
 
     public boolean isMuted(String playerName) {
@@ -858,12 +550,12 @@ public class ChatSystem {
     // ========== SISTEMA DE BYPASS ==========
     public void addBypass(String playerName) {
         bypassPlayers.add(playerName.toLowerCase());
-        NexusBotMod.LOGGER.info("🛡️ Bypass adicionado para: {}", playerName);
+        NexusBotMod.LOGGER.info("Bypass adicionado para: {}", playerName);
     }
 
     public void removeBypass(String playerName) {
         bypassPlayers.remove(playerName.toLowerCase());
-        NexusBotMod.LOGGER.info("🛡️ Bypass removido de: {}", playerName);
+        NexusBotMod.LOGGER.info("Bypass removido de: {}", playerName);
     }
 
     public boolean hasBypass(String playerName) {
@@ -873,12 +565,12 @@ public class ChatSystem {
     // ========== SISTEMA DE PALAVRAS ==========
     public void addBadWord(String word) {
         badWords.add(word.toLowerCase());
-        NexusBotMod.LOGGER.info("📝 Palavra proibida adicionada: {}", word);
+        NexusBotMod.LOGGER.info("Palavra proibida adicionada: {}", word);
     }
 
     public void addWildcardWord(String wildcard) {
         wildcardWords.add(wildcard.toLowerCase());
-        NexusBotMod.LOGGER.info("📝 Wildcard adicionado: {}", wildcard);
+        NexusBotMod.LOGGER.info("Wildcard adicionado: {}", wildcard);
     }
 
     // ========== LISTA DE JOGADORES ONLINE ==========
@@ -890,6 +582,12 @@ public class ChatSystem {
             }
         }
         return onlinePlayers;
+    }
+
+    private String getRandomOnlinePlayer() {
+        List<String> players = getOnlinePlayers();
+        if (players.isEmpty()) return "Galera";
+        return players.get(new Random().nextInt(players.size()));
     }
 
     public String getOnlinePlayersFormatted() {
@@ -911,45 +609,6 @@ public class ChatSystem {
 
     public Collection<String> getBadWords() {
         return badWords;
-    }
-
-    // ========== MÉTODOS PARA TESTE ==========
-    public int getMessageCounter() {
-        return messageCounter;
-    }
-
-    public void simulateBotTest(PlayerEntity player) {
-        try {
-            String[] testMessages = {
-                    "oi nexus",
-                    "nexus lixo",
-                    "bot burro",
-                    "ajuda bot",
-                    "nexus idiota",
-                    "bot inútil",
-                    "lag nexus",
-                    "socorro bot"
-            };
-
-            for (int i = 0; i < testMessages.length; i++) {
-                final String message = testMessages[i];
-                final int delay = i * 20;
-
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(delay * 50);
-                        handleBotResponse(player, message);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                }).start();
-            }
-
-            player.sendMessage(new StringTextComponent("§a✅ Teste iniciado! Verifique o chat."), player.getUUID());
-
-        } catch (Exception e) {
-            player.sendMessage(new StringTextComponent("§c❌ Erro no teste: " + e.getMessage()), player.getUUID());
-        }
     }
 
     // ========== LIMPEZA DO SCHEDULER ==========

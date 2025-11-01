@@ -90,6 +90,18 @@ public class PlayerCommands {
                 )
         );
 
+        // ========== COMANDO /cores - MOSTRA CÓDIGOS DE CORES ==========
+        dispatcher.register(Commands.literal("cores")
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    if (source.getEntity() instanceof PlayerEntity) {
+                        PlayerEntity player = (PlayerEntity) source.getEntity();
+                        NexusBotMod.getInstance().getMonitorCore().getChatSystem().showColorCodes(player);
+                    }
+                    return Command.SINGLE_SUCCESS;
+                })
+        );
+
         // ========== COMANDO /ajuda - TUTORIAL COMPLETO ==========
         dispatcher.register(Commands.literal("ajuda")
                 .executes(context -> {
@@ -107,6 +119,7 @@ public class PlayerCommands {
                         player.sendMessage(new StringTextComponent("§7- §b/l §f→ §bVolta para Chat Local §7(todas mensagens serão locais)"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §c/s <msg> §f→ §cChat da Staff §7(apenas OPs)"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §d/tell <nick> <msg> §f→ Mensagem Privada"), player.getUUID());
+                        player.sendMessage(new StringTextComponent("§7- §a/cores §f→ Mostra códigos de cores"), player.getUUID());
                         player.sendMessage(new StringTextComponent(""), player.getUUID());
                         player.sendMessage(new StringTextComponent("§a🎫 Sistema de Tickets:"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §a/ticket criar <msg> §f→ Criar ticket de ajuda"), player.getUUID());
