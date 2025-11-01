@@ -1,14 +1,11 @@
 package com.nexusbot.systems;
 
-import discord4j.common.util.Snowflake;
-import discord4j.core.object.entity.channel.MessageChannel;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.event.HoverEvent;
 import net.minecraft.world.server.ServerWorld;
 import com.nexusbot.NexusBotMod;
-import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -25,22 +22,16 @@ public class ChatSystem {
     private Set<String> bypassPlayers = new HashSet<>();
     private Set<String> mutedPlayers = new HashSet<>();
     private Map<String, String> chatModes = new HashMap<>();
+    private Map<String, String> customEvents = new HashMap<>();
 
     private final ScheduledExecutorService botScheduler = Executors.newScheduledThreadPool(1);
-    private EventSystem eventSystem;
+    private final Random random = new Random();
 
     // ========== SISTEMA DE IA SIMPLIFICADO ==========
     private final Map<String, Long> lastBotResponse = new HashMap<>();
-    private final Random random = new Random();
 
     public ChatSystem() {
-        this.eventSystem = new EventSystem();
         NexusBotMod.LOGGER.info("Sistema de Chat iniciado");
-    }
-
-    // ========== GETTER PARA EVENT SYSTEM ==========
-    public EventSystem getEventSystem() {
-        return this.eventSystem;
     }
 
     // ========== MÉTODOS FALTANTES PARA O MONITORCORE ==========
@@ -98,8 +89,6 @@ public class ChatSystem {
 
         // Log simples da atividade
         NexusBotMod.LOGGER.info("Atividade detectada: {} - {}", playerName, action);
-
-        // Pode expandir para um sistema mais complexo se necessário
     }
 
     // ========== SISTEMA DE MENSAGENS DO BOT PARA EVENTOS ==========
@@ -119,8 +108,8 @@ public class ChatSystem {
     public void onPlayerAdvancement(PlayerEntity player, String advancementName) {
         String playerName = player.getName().getString();
 
-        // Obter mensagem personalizada do EventSystem
-        String message = eventSystem.getAdvancementMessage(playerName, advancementName);
+        // Obter mensagem personalizada
+        String message = getAdvancementMessage(playerName, advancementName);
         if (message != null) {
             sendBotMessage(message);
         }
@@ -128,7 +117,207 @@ public class ChatSystem {
         NexusBotMod.LOGGER.info("🎯 Conquista: {} -> {}", playerName, advancementName);
     }
 
+    // ========== SISTEMA DE MENSAGENS PARA CONQUISTAS ==========
+    public String getAdvancementMessage(String playerName, String advancementName) {
+        // Primeiro verifica se tem evento customizado
+        String customMessage = customEvents.get(advancementName.toLowerCase());
+        if (customMessage != null) {
+            return translateColors(customMessage.replace("{player}", playerName));
+        }
+
+        // Mensagens padrão para conquistas específicas
+        switch (advancementName.toLowerCase()) {
+            // ========== MINECRAFT VANILLA ==========
+            case "minecraft:story/mine_stone":
+                return "⛏️ " + playerName + " começou sua jornada minerando pedra! Que venham os recursos!";
+
+            case "minecraft:story/mine_diamond":
+                return "💎 " + playerName + " encontrou DIAMANTES! Que sorte incrível!";
+
+            case "minecraft:story/enter_the_nether":
+                return "🔥 " + playerName + " entrou no Nether! Cuidado com os perigos!";
+
+            case "minecraft:story/enter_the_end":
+                return "🌌 " + playerName + " chegou ao Fim! Preparem-se para o dragão!";
+
+            case "minecraft:end/kill_dragon":
+                return "🐉 " + playerName + " MATOU O DRAGÃO DO FIM! Lenda viva do servidor!";
+
+            case "minecraft:end/elytra":
+                return "🦋 " + playerName + " conseguiu uma Elytra! Hora de voar pelos céus!";
+
+            // ========== DRACONIC EVOLUTION ==========
+            case "draconicevolution:wyvern_core":
+                return "⚡ " + playerName + " criou um Núcleo Wyvern! Poder draconico adquirido!";
+
+            case "draconicevolution:awakened_core":
+                return "🌟 " + playerName + " evoluiu para Núcleo Despertado! Poder cósmico!";
+
+            case "draconicevolution:draconic_core":
+                return "🐲 " + playerName + " alcançou o Núcleo Draconico! Poder supremo!";
+
+            case "draconicevolution:chaotic_core":
+                return "💥 " + playerName + " dominou o Núcleo Caótico! Poder absoluto!";
+
+            // ========== MEKANISM ==========
+            case "mekanism:atomic_disassembler":
+                return "🔧 " + playerName + " construiu um Desmontador Atômico! Tecnologia avançada!";
+
+            case "mekanism:mekasuit":
+                return "🛡️ " + playerName + " criou a MekaSuit! Proteção máxima ativada!";
+
+            // ========== TINKERS CONSTRUCT ==========
+            case "tconstruct:story/melting":
+                return "🔥 " + playerName + " dominou a fundição! Hora de criar ferramentas épicas!";
+
+            case "tconstruct:tools/cleaver":
+                return "⚔️ " + playerName + " forjou um Cleaver! Lâmina mortal criada!";
+
+            // ========== BOTANIA ==========
+            case "botania:main/terrasteel_pickup":
+                return "🌿 " + playerName + " criou Terrasteel! Poder da natureza!";
+
+            case "botania:main/gaia_guardian_kill":
+                return "👑 " + playerName + " derrotou o Guardião de Gaia! Mestre da Botania!";
+
+            // ========== ARS NOUVEAU ==========
+            case "ars_nouveau:novice_spellbook":
+                return "📖 " + playerName + " adquiriu um Grimório de Noviço! Magia despertada!";
+
+            case "ars_nouveau:archmage_spellbook":
+                return "🔮 " + playerName + " alcançou o Grimório de Arquimago! Poder mágico supremo!";
+
+            // ========== APOTHEOSIS ==========
+            case "apotheosis:affix_gear":
+                return "✨ " + playerName + " criou equipamento com Afixos! Itens lendários!";
+
+            case "apotheosis:mythic_gear":
+                return "🎭 " + playerName + " forjou equipamento Mítico! Poder além do normal!";
+
+            // ========== TWILIGHT FOREST ==========
+            case "twilightforest:progress_lich":
+                return "🧙 " + playerName + " derrotou o Lich! Coragem na Floresta Twilight!";
+
+            case "twilightforest:progress_ur_ghast":
+                return "👻 " + playerName + " venceu o Ur-Ghast! Desbravador das trevas!";
+
+            // ========== BLOOD MAGIC ==========
+            case "bloodmagic:altar":
+                return "🩸 " + playerName + " construiu um Altar de Sangue! Magia sanguínea ativada!";
+
+            case "bloodmagic:ritual_master":
+                return "🌀 " + playerName + " tornou-se Mestre de Rituais! Controle total do sangue!";
+
+            // ========== CREATE ==========
+            case "create:water_wheel":
+                return "💧 " + playerName + " construiu uma Roda D'água! Energia mecânica criada!";
+
+            case "create:contraption":
+                return "⚙️ " + playerName + " dominou as Contrapções! Engenharia criativa!";
+
+            // ========== CYCLIC ==========
+            case "cyclic:apple_ender":
+                return "🍎 " + playerName + " criou uma Maça do Ender! Teleporte instantâneo!";
+
+            case "cyclic:apple_emerald":
+                return "💚 " + playerName + " fez uma Maça de Esmeralda! Fortuna verde!";
+
+            // ========== FORBIDDEN ARCANUS ==========
+            case "forbidden_arcanus:obtain_dark_nether_star":
+                return "🌑 " + playerName + " obteve uma Estrela do Nether Sombria! Poder proibido!";
+
+            case "forbidden_arcanus:obtain_eternal_stella":
+                return "⭐ " + playerName + " conquistou a Eternal Stella! Artefato lendário!";
+
+            // ========== VAMPIRISM ==========
+            case "vampirism:become_vampire":
+                return "🧛 " + playerName + " tornou-se um Vampiro! Noites eternas começam!";
+
+            case "vampirism:become_hunter":
+                return "🏹 " + playerName + " juntou-se aos Caçadores! Justiceiro da noite!";
+
+            // ========== RATS ==========
+            case "rats:rat_taming":
+                return "🐀 " + playerName + " domou seu primeiro Rato! Amizade roedora!";
+
+            case "rats:rat_upgrade_aristocrat":
+                return "👑 " + playerName + " tem um Rato Aristocrata! Elegância roedora!";
+
+            // ========== ALLTHEMODIUM ==========
+            case "allthemodium:allthemodium_ingot":
+                return "💜 " + playerName + " forjou um lingote de Allthemodium! Metal supremo!";
+
+            case "allthemodium:unobtainium_ingot":
+                return "🌈 " + playerName + " criou Unobtainium! Material lendário obtido!";
+
+            // ========== CONQUISTAS GENÉRICAS ==========
+            default:
+                if (advancementName.contains("diamond") || advancementName.contains("diamante")) {
+                    return "💎 " + playerName + " conquistou algo com DIAMANTES! Brilho máximo!";
+                }
+                else if (advancementName.contains("nether") || advancementName.contains("inferno")) {
+                    return "🔥 " + playerName + " explorou o Nether! Coragem nas profundezas!";
+                }
+                else if (advancementName.contains("end") || advancementName.contains("fim")) {
+                    return "🌌 " + playerName + " desbravou o Fim! Aventureiro das estrelas!";
+                }
+                else if (advancementName.contains("boss") || advancementName.contains("chefe")) {
+                    return "👹 " + playerName + " derrotou um boss! Força de verdadeiro herói!";
+                }
+                else if (advancementName.contains("magic") || advancementName.contains("magia")) {
+                    return "🔮 " + playerName + " dominou a magia! Poder arcano liberado!";
+                }
+                else {
+                    // Mensagem genérica para outras conquistas
+                    return "🎯 " + playerName + " conquistou: " + formatAdvancementName(advancementName) + "! Parabéns!";
+                }
+        }
+    }
+
     // ========== SISTEMA DE CORES ==========
+    public static String translateColors(String message) {
+        if (message == null) return null;
+        return message.replace("&", "§");
+    }
+
+    private String formatAdvancementName(String advancementName) {
+        String formatted = advancementName
+                .replace("minecraft:", "")
+                .replace(":", " - ")
+                .replace("_", " ")
+                .replace("/", " - ");
+
+        return capitalizeWords(formatted);
+    }
+
+    private String capitalizeWords(String text) {
+        String[] words = text.split(" ");
+        StringBuilder result = new StringBuilder();
+        for (String word : words) {
+            if (!word.isEmpty()) {
+                result.append(Character.toUpperCase(word.charAt(0)))
+                        .append(word.substring(1))
+                        .append(" ");
+            }
+        }
+        return result.toString().trim();
+    }
+
+    // ========== SISTEMA DE EVENTOS CUSTOMIZADOS ==========
+    public void addCustomEvent(String advancementId, String message) {
+        customEvents.put(advancementId.toLowerCase(), message);
+        NexusBotMod.LOGGER.info("Evento customizado adicionado: {} -> {}", advancementId, message);
+    }
+
+    public void removeCustomEvent(String advancementId) {
+        customEvents.remove(advancementId.toLowerCase());
+        NexusBotMod.LOGGER.info("Evento customizado removido: {}", advancementId);
+    }
+
+    public Map<String, String> getCustomEvents() {
+        return new HashMap<>(customEvents);
+    }
+
     public void showColorCodes(PlayerEntity player) {
         player.sendMessage(new StringTextComponent("§6§l📚 CÓDIGOS DE CORES DISPONÍVEIS:"), player.getUUID());
         player.sendMessage(new StringTextComponent(""), player.getUUID());
@@ -314,15 +503,6 @@ public class ChatSystem {
             }
             NexusBotMod.LOGGER.info("Chat global enviado para {} jogadores", totalPlayers);
         }
-        if(NexusBotMod.botdc!=null && !NexusBotMod.canalID.isEmpty()){
-            NexusBotMod.botdc.getChannelById(Snowflake.of(NexusBotMod.canalID))
-                    .ofType(MessageChannel.class)
-                    .flatMap(channel -> channel.createMessage("**"+player.getName().getString()+"**: "+message))
-                    .onErrorResume(err -> {
-                        NexusBotMod.LOGGER.error("[NexusBot] erro ao enviar a mensagem");
-                        return Mono.empty();
-                    }).subscribe();
-        }
     }
 
     // ========== SISTEMA DE MODO DE CHAT ==========
@@ -478,24 +658,6 @@ public class ChatSystem {
         NexusBotMod.LOGGER.info("Wildcard adicionado: {}", wildcard);
     }
 
-    // ========== SISTEMA DE EVENTOS CUSTOMIZADOS ==========
-    public void addCustomEvent(String advancementId, String message) {
-        eventSystem.addCustomEvent(advancementId, message);
-    }
-
-    public void removeCustomEvent(String advancementId) {
-        eventSystem.removeCustomEvent(advancementId);
-    }
-
-    public Map<String, String> getCustomEvents() {
-        return eventSystem.getCustomEvents();
-    }
-
-    public List<String> getAvailableAdvancements() {
-        // Método simplificado - retorna lista vazia já que removemos o autocomplete
-        return new ArrayList<>();
-    }
-
     // ========== LISTA DE JOGADORES ONLINE ==========
     public List<String> getOnlinePlayers() {
         List<String> onlinePlayers = new ArrayList<>();
@@ -505,12 +667,6 @@ public class ChatSystem {
             }
         }
         return onlinePlayers;
-    }
-
-    private String getRandomOnlinePlayer() {
-        List<String> players = getOnlinePlayers();
-        if (players.isEmpty()) return "Galera";
-        return players.get(new Random().nextInt(players.size()));
     }
 
     public String getOnlinePlayersFormatted() {
@@ -532,6 +688,11 @@ public class ChatSystem {
 
     public Collection<String> getBadWords() {
         return badWords;
+    }
+
+    public List<String> getAvailableAdvancements() {
+        // Método simplificado - retorna lista vazia
+        return new ArrayList<>();
     }
 
     // ========== LIMPEZA DO SCHEDULER ==========
