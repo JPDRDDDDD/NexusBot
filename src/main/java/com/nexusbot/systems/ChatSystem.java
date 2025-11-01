@@ -36,6 +36,47 @@ public class ChatSystem {
     private final Map<String, Long> playerJoinTime = new HashMap<>();
 
     // ========== SISTEMA DE EMOJIS UNIVERSAL ==========
+
+    // ✅ EMOJIS 100% COMPATÍVEIS COM MINECRAFT
+    private final Map<String, String> EMOJI_MAP = new HashMap<String, String>() {{
+        // Expressões
+        put(":)", "☺"); put(":D", "😀"); put(":(", "☹"); put(";)", "😉");
+        put(":P", "😛"); put(":O", "😮"); put(":3", "😺"); put(":|", "😐");
+        put(":/", "😕"); put(":'(", "😢"); put(":')", "😂"); put("B)", "😎");
+        put("o.O", "😳"); put("O.o", "😲"); put("^_^", "😊"); put("-_-\"", "😑");
+        put("<3", "❤"); put("</3", "💔"); put("(y)", "👍"); put("(n)", "👎");
+
+        // Objetos e Símbolos
+        put(":star:", "⭐"); put(":sun:", "☀"); put(":cloud:", "☁"); put(":umbrella:", "☂");
+        put(":snowman:", "☃"); put(":comet:", "☄"); put(":phone:", "☎"); put(":flag:", "⚑");
+        put(":anchor:", "⚓"); put(":sword:", "⚔"); put(":scales:", "⚖"); put(":gear:", "⚙");
+        put(":pick:", "⛏"); put(":warning:", "⚠"); put(":radioactive:", "☢"); put(":biohazard:", "☣");
+        put(":shamrock:", "☘"); put(":peace:", "☮"); put(":yin_yang:", "☯"); put(":wheel:", "☸");
+        put(":spades:", "♠"); put(":hearts:", "♥"); put(":diamonds:", "♦"); put(":clubs:", "♣");
+        put(":music:", "♪"); put(":recycle:", "♻"); put(":tm:", "™"); put(":copyright:", "©");
+
+        // Setas e Formas
+        put(":arrow_up:", "↑"); put(":arrow_down:", "↓"); put(":arrow_left:", "←");
+        put(":arrow_right:", "→"); put(":left_right:", "↔"); put(":up_down:", "↕");
+        put(":triangle_up:", "▲"); put(":triangle_down:", "▼"); put(":triangle_left:", "◀");
+        put(":triangle_right:", "▶"); put(":circle:", "●"); put(":square:", "■");
+        put(":diamond:", "◆"); put(":star5:", "★"); put(":star6:", "☆"); put(":bullet:", "•");
+
+        // Jogo/Minecraft
+        put(":creeper:", "💥"); put(":steve:", "👨"); put(":alex:", "👩"); put(":pickaxe:", "⛏");
+        put(":sword:", "🗡"); put(":shield:", "🛡"); put(":bow:", "🏹"); put(":potion:", "🧪");
+        put(":enchant:", "✨"); put(":xp:", "💎"); put(":diamond:", "💎"); put(":emerald:", "💚");
+        put(":redstone:", "🔴"); put(":lapis:", "🔵"); put(":nether:", "🔥"); put(":end:", "🌌");
+        put(":villager:", "🧔"); put(":zombie:", "🧟"); put(":skeleton:", "💀"); put(":spider:", "🕷");
+        put(":ender:", "👁"); put(":ghast:", "👻"); put(":slime:", "🟢"); put(":wolf:", "🐺");
+
+        // Atividades
+        put(":mining:", "⛏"); put(":building:", "🏠"); put(":farming:", "🌾"); put(":fishing:", "🎣");
+        put(":crafting:", "🛠"); put(":exploring:", "🧭"); put(":fighting:", "⚔"); put(":trading:", "🤝");
+        put(":brewing:", "🧪"); put(":enchanting:", "✨"); put(":smelting:", "🔥"); put(":eating:", "🍎");
+        put(":sleeping:", "😴"); put(":running:", "🏃"); put(":jumping:", "🦘"); put(":flying:", "✈");
+    }};
+
     /**
      * Processa a mensagem para garantir compatibilidade com TODOS os emojis
      */
@@ -44,38 +85,78 @@ public class ChatSystem {
             return originalMessage;
         }
 
-        // Minecraft 1.16.5+ suporta a maioria dos emojis Unicode
-        // Apenas remove caracteres realmente problemáticos
-        String processed = originalMessage
-                .replace("█", "■") // Substitui caracteres de bloco problemáticos
+        String processed = originalMessage;
+
+        // ✅ CONVERTE CÓDIGOS PARA EMOJIS (:) → ☺)
+        processed = convertEmojiCodes(processed);
+
+        // ✅ REMOVE CARACTERES PROBLEMÁTICOS
+        processed = processed
+                .replace("█", "■")
                 .replace("▀", "▲")
                 .replace("▄", "▼")
-                .replace("§k", "") // Remove texto obfuscado
-                .replace("‍", " ") // Remove Zero Width Joiner problemático
+                .replace("§k", "")
+                .replace("‍", " ")
                 .replace("‌", " ")
                 .replace("​", " ");
+
+        // ✅ SUBSTITUI EMOJIS PROBLEMÁTICOS POR VERSÕES COMPATÍVEIS
+        processed = processed
+                .replace("👿", "😤").replace("😈", "😏")
+                .replace("🥵", "😅").replace("🤬", "😤")
+                .replace("🍆", "🥒").replace("🍑", "🍐")
+                .replace("💦", "💧").replace("🖕", "👎")
+                .replace("🏴", "■").replace("🏴‍☠️", "■")
+                .replace("🏳️‍🌈", "🌈").replace("🏳️‍⚧️", "⚥")
+                .replace("⚧", "⚥").replace("❤️‍🔥", "❤️")
+                .replace("❤️‍🩹", "❤️");
 
         return processed;
     }
 
-    // ========== SISTEMA DE MENCIONES A JOGADORES ==========
     /**
-     * Pega um jogador online aleatório para mencionar
+     * Converte códigos de texto em emojis
      */
+    private String convertEmojiCodes(String message) {
+        String result = message;
+        for (Map.Entry<String, String> entry : EMOJI_MAP.entrySet()) {
+            result = result.replace(entry.getKey(), entry.getValue());
+        }
+        return result;
+    }
+
+    /**
+     * Pega um emoji aleatório compatível
+     */
+    private String getRandomCompatibleEmoji() {
+        String[] compatibleEmojis = {
+                "✨", "⭐", "⚡", "☀", "☁", "❤", "★", "☆", "♠", "♣", "♥", "♦",
+                "☺", "☻", "☯", "⚓", "⚒", "⚔", "⚙", "⚗", "⚖", "⚰", "⚱", "⚜",
+                "⛏", "⛑", "⛓", "⛔", "⛰", "⛱", "🎮", "🎯", "🎲", "🎵",
+                "🏠", "🏹", "🐍", "🐑", "🐔", "🐛", "🐟", "🐢", "👀", "👋", "👑", "💀",
+                "💎", "💡", "💰", "🔍", "🔒", "🔓", "🔔", "🔮", "🛡", "🗡", "🗺", "😀",
+                "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉",
+                "😌", "😍", "🥰", "😘", "😗", "😙", "😚", "😋", "😛", "😝", "😜", "🤪",
+                "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕",
+                "🙁", "☹", "😣", "😖", "😫", "😩", "🥺", "😢", "😭", "😤", "😡", "😠",
+                "🤯", "😳", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫",
+                "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱",
+                "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢", "🤮", "🤧", "😷", "🤒", "🤕"
+        };
+        return compatibleEmojis[random.nextInt(compatibleEmojis.length)];
+    }
+
+    // ========== SISTEMA DE MENCIONES A JOGADORES ==========
     private String getRandomOnlinePlayer() {
         List<String> players = getOnlinePlayers();
         if (players.isEmpty()) return "Ninguém";
         return players.get(random.nextInt(players.size()));
     }
 
-    /**
-     * Pega um jogador aleatório (excluindo o que falou com o bot)
-     */
     private String getRandomPlayerForMention(String excludePlayer) {
         List<String> players = getOnlinePlayers();
-        if (players.size() < 2) return null; // Precisa de pelo menos 2 jogadores
+        if (players.size() < 2) return null;
 
-        // Remove o jogador que está falando com o bot
         List<String> availablePlayers = new ArrayList<>(players);
         availablePlayers.remove(excludePlayer);
 
@@ -83,9 +164,6 @@ public class ChatSystem {
         return availablePlayers.get(random.nextInt(availablePlayers.size()));
     }
 
-    /**
-     * Adiciona menções a jogadores nas respostas
-     */
     private String addPlayerMentions(String response, String mentionedPlayer) {
         if (mentionedPlayer != null && response.contains("{player}")) {
             return response.replace("{player}", mentionedPlayer);
@@ -95,7 +173,6 @@ public class ChatSystem {
 
     // Categorias de respostas da IA - COM MENCIONES A JOGADORES
     private final Map<String, List<String>> botResponses = new HashMap<String, List<String>>() {{
-        // 🧠 CATEGORIA: PROVOCAÇÕES / OFENSAS LEVES
         put("provocacao", Arrays.asList(
                 "😎 Relaxa {player}, só quem tem cheat me chama assim! 🚫",
                 "😏 {player}, lixo é quem precisa de hack pra jogar! 💻",
@@ -110,7 +187,6 @@ public class ChatSystem {
                 "🤖 {player}, se eu tivesse sentimentos, ainda não ligaria! 💭"
         ));
 
-        // 😎 CATEGORIA: BRINCADEIRAS / HUMOR LEVE
         put("brincadeira", Arrays.asList(
                 "👋 Oi {player}! Eu tô sempre online, diferente de certos jogadores! ⏰",
                 "📶 {player}, lag? Isso é você ou sua internet de micro-ondas? 🍳",
@@ -125,7 +201,6 @@ public class ChatSystem {
                 "🎮 {player}, vai jogar ou vai ficar me enchendo? 😂"
         ));
 
-        // 🚫 CATEGORIA: ALERTAS E SARCASMO
         put("alerta", Arrays.asList(
                 "🚨 {player}, movimento detectado: suspeito demais! 🤖",
                 "⚡ {player}, speed atômico? Ok, Sonic, tô de olho! 👁️",
@@ -139,7 +214,6 @@ public class ChatSystem {
                 "❌ {player}, hack? Aqui não, campeão. Próximo! 👉"
         ));
 
-        // 💬 CATEGORIA: FRASES GERAIS COM MENCIONES
         put("geral", Arrays.asList(
                 "💡 {player}, dica: quem não usa cheat, dorme tranquilo! 😴",
                 "🧹 {player}, limpando o servidor... menos os preguiçosos! 🛌",
@@ -154,7 +228,6 @@ public class ChatSystem {
                 "🎪 {player}, o show do NexusBot nunca para! 🎭"
         ));
 
-        // 💀 CATEGORIA: RESPOSTAS DE PUNIÇÃO
         put("punição", Arrays.asList(
                 "⚠️ {player} kickado! Motivo: achou que era invisível! 👻",
                 "🚫 {player} banido! Pensou que era mais rápido que eu! 🏃💨",
@@ -168,7 +241,6 @@ public class ChatSystem {
                 "🧩 {player}, hack detectado e reciclado! ♻️"
         ));
 
-        // 🎮 CATEGORIA: COMENTÁRIOS SOBRE JOGADORES
         put("jogador", Arrays.asList(
                 "👋 Oi {player}! Tô sempre online, diferente de alguns! ⏰",
                 "🎮 {player} tá mandando bem no servidor! Continuem! 🏆",
@@ -187,7 +259,6 @@ public class ChatSystem {
                 "🎯 {player} acertou um tiro preciso? Olha o pro player! 👑"
         ));
 
-        // 📊 CATEGORIA: ESTATÍSTICAS DO SERVIDOR
         put("estatisticas", Arrays.asList(
                 "📊 {player}, temos {online} jogadores online! 🎉",
                 "🌍 {player}, servidor está {status} hoje! Vamos jogar! 🎮",
@@ -201,7 +272,6 @@ public class ChatSystem {
                 "🔍 {player}, {exploracao} chunks explorados! Aventura! 🗺️"
         ));
 
-        // 🎉 CATEGORIA: ELOGIO E MOTIVAÇÃO
         put("elogio", Arrays.asList(
                 "⭐ {player}, você é demais! Continue assim! 🌟",
                 "🏆 {player}, jogador exemplar do servidor! 👏",
@@ -282,12 +352,12 @@ public class ChatSystem {
 
         if (lastPlayerComment.containsKey(playerName)) {
             long lastComment = lastPlayerComment.get(playerName);
-            if (currentTime - lastComment < 600000) { // 10 minutos
+            if (currentTime - lastComment < 600000) {
                 return;
             }
         }
 
-        if (random.nextInt(4) == 0) { // 25% chance
+        if (random.nextInt(4) == 0) {
             String comment = generatePlayerComment(player, action);
             if (comment != null) {
                 sendBotMessage(comment);
@@ -304,7 +374,6 @@ public class ChatSystem {
         if (comments != null && !comments.isEmpty()) {
             String comment = comments.get(random.nextInt(comments.size()));
 
-            // Personaliza baseado na ação
             if (action.contains("morreu") || action.contains("death")) {
                 comment = "💀 " + playerName + " morreu de novo? Tá precisando de aulas de sobrevivência! 😂";
             } else if (action.contains("diamond") || action.contains("minerio")) {
@@ -352,7 +421,6 @@ public class ChatSystem {
             int totalConstrucoes = getTotalStat("construcoes");
             int totalPvP = getTotalStat("pvp");
 
-            // Pega um jogador aleatório para mencionar
             String mentionedPlayer = getRandomOnlinePlayer();
 
             message = message.replace("{online}", String.valueOf(onlinePlayers))
@@ -405,7 +473,7 @@ public class ChatSystem {
 
         if (lastBotResponse.containsKey(playerUUID)) {
             long lastResponse = lastBotResponse.get(playerUUID);
-            if (currentTime - lastResponse < 10000) { // 10 segundos
+            if (currentTime - lastResponse < 10000) {
                 return;
             }
         }
@@ -418,10 +486,9 @@ public class ChatSystem {
         if (isForBot) {
             lastBotResponse.put(playerUUID, currentTime);
 
-            // Pega um jogador aleatório para mencionar (excluindo quem falou)
             String mentionedPlayer = getRandomPlayerForMention(player.getName().getString());
             if (mentionedPlayer == null) {
-                mentionedPlayer = getRandomOnlinePlayer(); // Fallback
+                mentionedPlayer = getRandomOnlinePlayer();
             }
 
             String response = generateBotResponse(cleanMessage, player.getName().getString(), mentionedPlayer);
@@ -473,14 +540,12 @@ public class ChatSystem {
         if (responses != null && !responses.isEmpty()) {
             String response = responses.get(random.nextInt(responses.size()));
 
-            // Adiciona menções aos jogadores
             response = addPlayerMentions(response, mentionedPlayer);
             response = personalizeResponse(response, playerName);
 
             return response;
         }
 
-        // Resposta padrão com menção
         return "🤖 " + mentionedPlayer + ", NexusBot aqui! Em que posso ajudar? 🎮";
     }
 
@@ -533,7 +598,6 @@ public class ChatSystem {
     }
 
     private void sendRandomBotMessage() {
-        // Escolhe categoria aleatória
         String[] categories = {"geral", "elogio", "estatisticas", "jogador"};
         String category = categories[random.nextInt(categories.length)];
 
@@ -541,7 +605,6 @@ public class ChatSystem {
         if (responses != null && !responses.isEmpty()) {
             String message = responses.get(random.nextInt(responses.size()));
 
-            // Adiciona menção a jogador aleatório
             String mentionedPlayer = getRandomOnlinePlayer();
             message = addPlayerMentions(message, mentionedPlayer);
 
@@ -554,6 +617,7 @@ public class ChatSystem {
     public void sendBotMessage(String message) {
         if (net.minecraftforge.fml.server.ServerLifecycleHooks.getCurrentServer() != null) {
             String processedMessage = processMessageForChat(message);
+
             String formattedMessage = "§8[§6🤖 NexusBot§8] §e" + processedMessage;
             StringTextComponent textComponent = new StringTextComponent(formattedMessage);
 
@@ -585,10 +649,8 @@ public class ChatSystem {
 
         NexusBotMod.LOGGER.info("💬 Chat: {} -> {}", playerName, message);
 
-        // Processa a mensagem para compatibilidade de emojis
         String processedMessage = processMessageForChat(message);
 
-        // Primeiro verificar se é para o bot
         handleBotResponse(player, processedMessage);
 
         if (isMuted(playerName)) {

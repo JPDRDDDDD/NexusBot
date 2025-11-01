@@ -9,6 +9,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 
 import com.nexusbot.systems.MonitorCore;
 import com.nexusbot.config.ConfigManager;
+import com.nexusbot.config.UnicodeEnforcer; // ✅ NOVO
 import com.nexusbot.commands.AdminCommands;
 import com.nexusbot.commands.PlayerCommands;
 
@@ -35,9 +36,20 @@ public class NexusBotMod {
 
     private void setup(final FMLCommonSetupEvent event) {
         this.configManager = new ConfigManager();
+
+        // ✅ ATIVA UNICODE PARA EMOJIS
+        UnicodeEnforcer.enableUnicodeFont();
+
         this.monitorCore = new MonitorCore();
 
         LOGGER.info("NexusBot carregado com sucesso!");
+
+        // ✅ VERIFICA SE UNICODE ESTÁ ATIVADO
+        if (UnicodeEnforcer.isUnicodeEnabled()) {
+            LOGGER.info("✅ Sistema de emojis ativado - Todos os emojis devem funcionar!");
+        } else {
+            LOGGER.warn("⚠ Sistema de emojis pode ter problemas - Unicode não detectado");
+        }
     }
 
     @SubscribeEvent
