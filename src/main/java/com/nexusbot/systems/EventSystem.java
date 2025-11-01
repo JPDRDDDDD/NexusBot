@@ -4,6 +4,8 @@ import com.nexusbot.NexusBotMod;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.text.StringTextComponent;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.loading.FMLLoader;
 
 import java.io.*;
 import java.util.*;
@@ -15,9 +17,357 @@ public class EventSystem {
     private final Random random = new Random();
     private Set<String> detectedAdvancements = new ConcurrentHashMap<String, Boolean>().keySet(true);
 
+    // Mapeamento de mods para IDs de conquistas
+    private Map<String, List<String>> modAdvancements = new HashMap<>();
+
     public EventSystem() {
         loadEventsFromFile();
+        initializeModAdvancements();
         NexusBotMod.LOGGER.info("Sistema de Eventos carregado: {} eventos", customEvents.size());
+        NexusBotMod.LOGGER.info("Mods detectados para autocomplete: {}", modAdvancements.size());
+    }
+
+    // ========== SISTEMA DE DETECÇÃO AUTOMÁTICA DE MODS ==========
+    private void initializeModAdvancements() {
+        modAdvancements.clear();
+
+        // ✅ CONQUISTAS VANILLA (sempre disponíveis)
+        modAdvancements.put("minecraft", Arrays.asList(
+                "minecraft:story/root",
+                "minecraft:story/mine_stone",
+                "minecraft:story/upgrade_tools",
+                "minecraft:story/smelt_iron",
+                "minecraft:story/obtain_armor",
+                "minecraft:story/lava_bucket",
+                "minecraft:story/iron_tools",
+                "minecraft:story/deflect_arrow",
+                "minecraft:story/form_obsidian",
+                "minecraft:story/mine_diamond",
+                "minecraft:story/enter_the_nether",
+                "minecraft:story/shiny_gear",
+                "minecraft:story/enchant_item",
+                "minecraft:story/cure_zombie_villager",
+                "minecraft:story/follow_ender_eye",
+                "minecraft:story/enter_the_end",
+                "minecraft:nether/root",
+                "minecraft:nether/return_to_sender",
+                "minecraft:nether/find_bastion",
+                "minecraft:nether/find_fortress",
+                "minecraft:nether/get_wither_skull",
+                "minecraft:nether/obtain_blaze_rod",
+                "minecraft:nether/obtain_crying_obsidian",
+                "minecraft:nether/distract_piglin",
+                "minecraft:nether/ride_strider",
+                "minecraft:nether/uneasy_alliance",
+                "minecraft:nether/loot_bastion",
+                "minecraft:nether/use_lodestone",
+                "minecraft:nether/netherite_armor",
+                "minecraft:nether/get_debris",
+                "minecraft:nether/obtain_ancient_debris",
+                "minecraft:nether/fast_travel",
+                "minecraft:nether/find_fortress",
+                "minecraft:nether/obtain_crying_obsidian",
+                "minecraft:nether/charge_respawn_anchor",
+                "minecraft:end/root",
+                "minecraft:end/kill_dragon",
+                "minecraft:end/enter_end_gateway",
+                "minecraft:end/respawn_dragon",
+                "minecraft:end/dragon_egg",
+                "minecraft:end/elytra",
+                "minecraft:end/find_end_city",
+                "minecraft:adventure/root",
+                "minecraft:adventure/voluntary_exile",
+                "minecraft:adventure/kill_a_mob",
+                "minecraft:adventure/trade",
+                "minecraft:adventure/honey_block_slide",
+                "minecraft:adventure/ol_betsy",
+                "minecraft:adventure/sleep_in_bed",
+                "minecraft:adventure/shoot_arrow",
+                "minecraft:adventure/kill_all_mobs",
+                "minecraft:adventure/totem_of_undying",
+                "minecraft:adventure/summon_iron_golem",
+                "minecraft:adventure/two_birds_one_arrow",
+                "minecraft:adventure/whos_the_pillager_now",
+                "minecraft:adventure/arbalistic",
+                "minecraft:adventure/adventuring_time",
+                "minecraft:adventure/hero_of_the_village",
+                "minecraft:adventure/throw_trident",
+                "minecraft:adventure/very_very_frightening",
+                "minecraft:adventure/sniper_duel",
+                "minecraft:husbandry/root",
+                "minecraft:husbandry/safely_harvest_honey",
+                "minecraft:husbandry/breed_an_animal",
+                "minecraft:husbandry/tame_an_animal",
+                "minecraft:husbandry/fishy_business",
+                "minecraft:husbandry/silk_touch_nest",
+                "minecraft:husbandry/plant_seed",
+                "minecraft:husbandry/kill_axolotl_target",
+                "minecraft:husbandry/complete_catalogue",
+                "minecraft:husbandry/tactical_fishing",
+                "minecraft:husbandry/balanced_diet",
+                "minecraft:husbandry/obtain_netherite_hoe"
+        ));
+
+        // ✅ DRACONIC EVOLUTION (presente no seu servidor)
+        if (isModLoaded("draconicevolution")) {
+            modAdvancements.put("draconicevolution", Arrays.asList(
+                    "draconicevolution:wyvern_core",
+                    "draconicevolution:awakened_core",
+                    "draconicevolution:draconic_core",
+                    "draconicevolution:chaotic_core",
+                    "draconicevolution:wyvern_tools",
+                    "draconicevolution:draconic_tools",
+                    "draconicevolution:chaotic_tools",
+                    "draconicevolution:wyvern_armor",
+                    "draconicevolution:draconic_armor",
+                    "draconicevolution:chaotic_armor",
+                    "draconicevolution:reactor",
+                    "draconicevolution:energy_core"
+            ));
+        }
+
+        // ✅ MEKANISM (presente no seu servidor)
+        if (isModLoaded("mekanism")) {
+            modAdvancements.put("mekanism", Arrays.asList(
+                    "mekanism:root",
+                    "mekanism:metallurgic_infuser",
+                    "mekanism:purification_chamber",
+                    "mekanism:crusher",
+                    "mekanism:enrichment_chamber",
+                    "mekanism:osmium_compressor",
+                    "mekanism:combiner",
+                    "mekanism:digital_miner",
+                    "mekanism:atomic_disassembler",
+                    "mekanism:jetpack",
+                    "mekanism:mekasuit",
+                    "mekanism:qio_drive"
+            ));
+        }
+
+        // ✅ TINKERS CONSTRUCT (presente no seu servidor)
+        if (isModLoaded("tconstruct")) {
+            modAdvancements.put("tconstruct", Arrays.asList(
+                    "tconstruct:story/root",
+                    "tconstruct:story/melting",
+                    "tconstruct:story/casts",
+                    "tconstruct:story/tinkers_anvil",
+                    "tconstruct:world/slime_island",
+                    "tconstruct:tools/station",
+                    "tconstruct:tools/pickaxe",
+                    "tconstruct:tools/sledge_hammer",
+                    "tconstruct:tools/broad_axe",
+                    "tconstruct:tools/scythe",
+                    "tconstruct:tools/cleaver",
+                    "tconstruct:tools/kama"
+            ));
+        }
+
+        // ✅ BOTANIA (presente no seu servidor)
+        if (isModLoaded("botania")) {
+            modAdvancements.put("botania", Arrays.asList(
+                    "botania:main/root",
+                    "botania:main/flower_pickup",
+                    "botania:main/lexicon_use",
+                    "botania:main/mana_pool_craft",
+                    "botania:main/rune_pickup",
+                    "botania:main/terrasteel_pickup",
+                    "botania:main/gaia_guardian_kill",
+                    "botania:challenge/rank_ss_pick"
+            ));
+        }
+
+        // ✅ ARS NOUVEAU (presente no seu servidor)
+        if (isModLoaded("ars_nouveau")) {
+            modAdvancements.put("ars_nouveau", Arrays.asList(
+                    "ars_nouveau:root",
+                    "ars_nouveau:novice_spellbook",
+                    "ars_nouveau:apprentice_spellbook",
+                    "ars_nouveau:archmage_spellbook",
+                    "ars_nouveau:enchanting_apparatus",
+                    "ars_nouveau:source_jar",
+                    "ars_nouveau:spell_turret",
+                    "ars_nouveau:wixie_charm"
+            ));
+        }
+
+        // ✅ APOTHEOSIS (presente no seu servidor)
+        if (isModLoaded("apotheosis")) {
+            modAdvancements.put("apotheosis", Arrays.asList(
+                    "apotheosis:root",
+                    "apotheosis:affix_gear",
+                    "apotheosis:mythic_gear",
+                    "apotheosis:spawner",
+                    "apotheosis:boss"
+            ));
+        }
+
+        // ✅ TWILIGHT FOREST (presente no seu servidor)
+        if (isModLoaded("twilightforest")) {
+            modAdvancements.put("twilightforest", Arrays.asList(
+                    "twilightforest:root",
+                    "twilightforest:progress_lich",
+                    "twilightforest:progress_ur_ghast",
+                    "twilightforest:progress_yeti",
+                    "twilightforest:progress_naga",
+                    "twilightforest:progress_knights",
+                    "twilightforest:progress_troll",
+                    "twilightforest:progress_glacier",
+                    "twilightforest:progress_final_castle"
+            ));
+        }
+
+        // ✅ BLOOD MAGIC (presente no seu servidor)
+        if (isModLoaded("bloodmagic")) {
+            modAdvancements.put("bloodmagic", Arrays.asList(
+                    "bloodmagic:root",
+                    "bloodmagic:altar",
+                    "bloodmagic:alchemy_table",
+                    "bloodmagic:soul_forge",
+                    "bloodmagic:ritual_stone",
+                    "bloodmagic:ritual_master"
+            ));
+        }
+
+        // ✅ CREATE (presente no seu servidor)
+        if (isModLoaded("create")) {
+            modAdvancements.put("create", Arrays.asList(
+                    "create:root",
+                    "create:water_wheel",
+                    "create:windmill",
+                    "create:encased_fan",
+                    "create:mechanical_press",
+                    "create:mechanical_mixer",
+                    "create:deployer",
+                    "create:mechanical_drill",
+                    "create:mechanical_saw",
+                    "create:mechanical_harvester",
+                    "create:mechanical_plough",
+                    "create:contraption"
+            ));
+        }
+
+        // ✅ CYCLIC (presente no seu servidor)
+        if (isModLoaded("cyclic")) {
+            modAdvancements.put("cyclic", Arrays.asList(
+                    "cyclic:root",
+                    "cyclic:apple_ender",
+                    "cyclic:apple_chorus",
+                    "cyclic:apple_prismarine",
+                    "cyclic:apple_honey",
+                    "cyclic:apple_lapis",
+                    "cyclic:apple_emerald"
+            ));
+        }
+
+        // ✅ FORBIDDEN ARCANUS (presente no seu servidor)
+        if (isModLoaded("forbidden_arcanus")) {
+            modAdvancements.put("forbidden_arcanus", Arrays.asList(
+                    "forbidden_arcanus:root",
+                    "forbidden_arcanus:obtain_rune",
+                    "forbidden_arcanus:obtain_arcane_crystal",
+                    "forbidden_arcanus:obtain_dark_nether_star",
+                    "forbidden_arcanus:obtain_eternal_stella"
+            ));
+        }
+
+        // ✅ VAMPIRISM (presente no seu servidor)
+        if (isModLoaded("vampirism")) {
+            modAdvancements.put("vampirism", Arrays.asList(
+                    "vampirism:root",
+                    "vampirism:become_vampire",
+                    "vampirism:become_hunter",
+                    "vampirism:vampire_level_5",
+                    "vampirism:hunter_level_5",
+                    "vampirism:kill_vampire_village"
+            ));
+        }
+
+        // ✅ RATS (presente no seu servidor)
+        if (isModLoaded("rats")) {
+            modAdvancements.put("rats", Arrays.asList(
+                    "rats:root",
+                    "rats:rat_taming",
+                    "rats:rat_upgrade_chef",
+                    "rats:rat_upgrade_basic",
+                    "rats:rat_upgrade_combined",
+                    "rats:rat_upgrade_aristocrat"
+            ));
+        }
+
+        // ✅ ALLTHEMODIUM (presente no seu servidor)
+        if (isModLoaded("allthemodium")) {
+            modAdvancements.put("allthemodium", Arrays.asList(
+                    "allthemodium:root",
+                    "allthemodium:allthemodium_ingot",
+                    "allthemodium:vibranium_ingot",
+                    "allthemodium:unobtainium_ingot",
+                    "allthemodium:allthemodium_armor",
+                    "allthemodium:allthemodium_tools"
+            ));
+        }
+
+        NexusBotMod.LOGGER.info("✅ Sistema de autocomplete carregado com sucesso!");
+    }
+
+    // ========== VERIFICA SE MOD ESTÁ CARREGADO ==========
+    private boolean isModLoaded(String modId) {
+        try {
+            return ModList.get().isLoaded(modId);
+        } catch (Exception e) {
+            NexusBotMod.LOGGER.warn("❌ Erro ao verificar mod {}: {}", modId, e.getMessage());
+            return false;
+        }
+    }
+
+    // ========== SISTEMA DE AUTCOMPLETE INTELIGENTE ==========
+    public List<String> getAdvancementSuggestions(String partialId) {
+        List<String> suggestions = new ArrayList<>();
+
+        if (partialId == null || partialId.trim().isEmpty()) {
+            // Retorna todas as conquistas disponíveis
+            for (List<String> advancements : modAdvancements.values()) {
+                suggestions.addAll(advancements);
+            }
+            // Adiciona conquistas detectadas
+            suggestions.addAll(detectedAdvancements);
+        } else {
+            String searchTerm = partialId.toLowerCase();
+
+            // Busca em todas as conquistas
+            for (List<String> advancements : modAdvancements.values()) {
+                for (String advancement : advancements) {
+                    if (advancement.toLowerCase().contains(searchTerm)) {
+                        suggestions.add(advancement);
+                    }
+                }
+            }
+
+            // Busca nas conquistas detectadas
+            for (String advancement : detectedAdvancements) {
+                if (advancement.toLowerCase().contains(searchTerm)) {
+                    suggestions.add(advancement);
+                }
+            }
+        }
+
+        // Remove duplicatas e ordena
+        Set<String> uniqueSuggestions = new TreeSet<>(suggestions);
+        return new ArrayList<>(uniqueSuggestions);
+    }
+
+    // ========== GET MODS DISPONÍVEIS PARA AUTCOMPLETE ==========
+    public Map<String, List<String>> getAvailableModAdvancements() {
+        return new HashMap<>(modAdvancements);
+    }
+
+    // ========== GET SUGESTÕES POR MOD ==========
+    public List<String> getAdvancementsByMod(String modId) {
+        return modAdvancements.getOrDefault(modId, new ArrayList<>());
+    }
+
+    // ========== GET MODS INSTALADOS ==========
+    public List<String> getInstalledMods() {
+        return new ArrayList<>(modAdvancements.keySet());
     }
 
     // ========== SISTEMA DE CORES ==========

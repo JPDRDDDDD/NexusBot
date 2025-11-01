@@ -29,10 +29,129 @@ public class AdminCommands {
                     source.sendSuccess(new StringTextComponent("§6/nexusbot ticket §7- Sistema de tickets"), false);
                     source.sendSuccess(new StringTextComponent("§6/nexusbot sistema §7- Sistema do bot"), false);
                     source.sendSuccess(new StringTextComponent("§6/nexusbot eventos §7- Sistema de eventos"), false);
+                    source.sendSuccess(new StringTextComponent("§6/nexusbot autocomplete §7- Sistema de IDs"), false);
                     source.sendSuccess(new StringTextComponent(""), false);
                     source.sendSuccess(new StringTextComponent("§a💡 Use §e/ajuda §apara ver comandos de jogador"), false);
                     return 1;
                 })
+        );
+
+        // ========== SISTEMA DE AUTCOMPLETE PARA IDs ==========
+        dispatcher.register(Commands.literal("bot-ids")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l🎯 SISTEMA DE AUTCOMPLETE - IDs DE CONQUISTAS"), false);
+                    source.sendSuccess(new StringTextComponent("§7Busque IDs de conquistas por mod ou termo"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📋 Comandos Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-ids listar §7- Listar todos os mods"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-ids mod <modid> §7- IDs de um mod específico"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-ids buscar <termo> §7- Buscar por termo"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-ids todos §7- Todas as conquistas"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§a💡 Use com §e/bot-evento add <id> \"mensagem\""), false);
+                    return 1;
+                })
+                // /bot-ids listar
+                .then(Commands.literal("listar")
+                        .executes(context -> {
+                            CommandSource source = context.getSource();
+                            java.util.List<String> mods = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getEventSystem().getInstalledMods();
+
+                            source.sendSuccess(new StringTextComponent("§6§l📦 MODS DETECTADOS (§e" + mods.size() + "§6)"), false);
+                            source.sendSuccess(new StringTextComponent("§7Use: §6/bot-ids mod <modid>"), false);
+                            source.sendSuccess(new StringTextComponent(""), false);
+
+                            for (String mod : mods) {
+                                int count = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getEventSystem().getAdvancementsByMod(mod).size();
+                                source.sendSuccess(new StringTextComponent("§7- §a" + mod + " §8(§e" + count + " conquistas§8)"), false);
+                            }
+                            return 1;
+                        })
+                )
+                // /bot-ids mod
+                .then(Commands.literal("mod")
+                        .then(Commands.argument("modid", StringArgumentType.string())
+                                .executes(context -> {
+                                    CommandSource source = context.getSource();
+                                    String modId = StringArgumentType.getString(context, "modid");
+
+                                    java.util.List<String> advancements = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getEventSystem().getAdvancementsByMod(modId);
+
+                                    if (advancements.isEmpty()) {
+                                        source.sendSuccess(new StringTextComponent("§c❌ Mod não encontrado ou sem conquistas: " + modId), false);
+                                        source.sendSuccess(new StringTextComponent("§7Use §6/bot-ids listar §7para ver mods disponíveis"), false);
+                                    } else {
+                                        source.sendSuccess(new StringTextComponent("§6§l🎯 CONQUISTAS DE §e" + modId.toUpperCase() + " (§a" + advancements.size() + "§6)"), false);
+                                        source.sendSuccess(new StringTextComponent("§7Use: §e/bot-evento add <id> \"sua mensagem\""), false);
+                                        source.sendSuccess(new StringTextComponent(""), false);
+
+                                        int count = 0;
+                                        for (String advancement : advancements) {
+                                            if (count < 15) { // Mostra apenas as primeiras 15
+                                                source.sendSuccess(new StringTextComponent("§7- §a" + advancement), false);
+                                                count++;
+                                            } else {
+                                                source.sendSuccess(new StringTextComponent("§7... e mais " + (advancements.size() - 15) + " conquistas"), false);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    return 1;
+                                })
+                        )
+                )
+                // /bot-ids buscar
+                .then(Commands.literal("buscar")
+                        .then(Commands.argument("termo", StringArgumentType.string())
+                                .executes(context -> {
+                                    CommandSource source = context.getSource();
+                                    String searchTerm = StringArgumentType.getString(context, "termo");
+
+                                    java.util.List<String> suggestions = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getEventSystem().getAdvancementSuggestions(searchTerm);
+
+                                    source.sendSuccess(new StringTextComponent("§6§l🔍 BUSCA: §e'" + searchTerm + "' (§a" + suggestions.size() + " resultados§6)"), false);
+                                    source.sendSuccess(new StringTextComponent("§7Use: §e/bot-evento add <id> \"sua mensagem\""), false);
+                                    source.sendSuccess(new StringTextComponent(""), false);
+
+                                    if (suggestions.isEmpty()) {
+                                        source.sendSuccess(new StringTextComponent("§7Nenhum resultado encontrado"), false);
+                                    } else {
+                                        int count = 0;
+                                        for (String suggestion : suggestions) {
+                                            if (count < 10) { // Mostra apenas as primeiras 10
+                                                source.sendSuccess(new StringTextComponent("§7- §a" + suggestion), false);
+                                                count++;
+                                            } else {
+                                                source.sendSuccess(new StringTextComponent("§7... e mais " + (suggestions.size() - 10) + " resultados"), false);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    return 1;
+                                })
+                        )
+                )
+                // /bot-ids todos
+                .then(Commands.literal("todos")
+                        .executes(context -> {
+                            CommandSource source = context.getSource();
+                            java.util.List<String> allAdvancements = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getEventSystem().getAdvancementSuggestions("");
+
+                            source.sendSuccess(new StringTextComponent("§6§l📚 TODAS AS CONQUISTAS (§a" + allAdvancements.size() + "§6)"), false);
+                            source.sendSuccess(new StringTextComponent("§7Use §6/bot-ids buscar <termo> §7para filtrar"), false);
+                            source.sendSuccess(new StringTextComponent("§7Ou §6/bot-ids mod <modid> §7para ver por mod"), false);
+                            source.sendSuccess(new StringTextComponent(""), false);
+
+                            // Mostra apenas um resumo por mod
+                            java.util.Map<String, java.util.List<String>> modAdvancements = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getEventSystem().getAvailableModAdvancements();
+                            for (java.util.Map.Entry<String, java.util.List<String>> entry : modAdvancements.entrySet()) {
+                                source.sendSuccess(new StringTextComponent("§7- §a" + entry.getKey() + " §8(§e" + entry.getValue().size() + " conquistas§8)"), false);
+                            }
+                            return 1;
+                        })
+                )
         );
 
         // ========== CATEGORIA: EVENTOS DO BOT ==========
@@ -48,10 +167,12 @@ public class AdminCommands {
                     source.sendSuccess(new StringTextComponent("§6/bot-evento remove <id> §7- Remover evento"), false);
                     source.sendSuccess(new StringTextComponent("§6/bot-evento listar §7- Listar eventos"), false);
                     source.sendSuccess(new StringTextComponent("§6/bot-evento disponiveis §7- Conquistas disponíveis"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-ids §7- Sistema de autocomplete"), false);
                     source.sendSuccess(new StringTextComponent(""), false);
                     source.sendSuccess(new StringTextComponent("§a💡 Exemplo:"), false);
                     source.sendSuccess(new StringTextComponent("§7/bot-evento add draconicevolution:draconic_core \"&cParabens &4Voce conseguiu &2Seu primeiro Draconic Core &nContinue assim\""), false);
                     source.sendSuccess(new StringTextComponent("§7Use §e/cores §7para ver códigos de cores disponíveis"), false);
+                    source.sendSuccess(new StringTextComponent("§7Use §e/bot-ids §7para buscar IDs automaticamente"), false);
                     return 1;
                 })
                 // /bot-evento add
@@ -111,6 +232,7 @@ public class AdminCommands {
 
                             source.sendSuccess(new StringTextComponent("§6§l🎯 CONQUISTAS DISPONIVEIS (§e" + available.size() + "§6)"), false);
                             source.sendSuccess(new StringTextComponent("§7Use: /bot-evento add <id> \"sua mensagem\""), false);
+                            source.sendSuccess(new StringTextComponent("§7Ou use: §6/bot-ids §7para autocomplete inteligente"), false);
                             source.sendSuccess(new StringTextComponent(""), false);
 
                             int count = 0;
@@ -126,6 +248,7 @@ public class AdminCommands {
 
                             source.sendSuccess(new StringTextComponent(""), false);
                             source.sendSuccess(new StringTextComponent("§a💡 Dica: §7Conquistas em §averde§7 já foram detectadas no servidor"), false);
+                            source.sendSuccess(new StringTextComponent("§a🚀 Use: §6/bot-ids listar §apara ver todos os mods detectados"), false);
                             return 1;
                         })
                 )
@@ -495,6 +618,7 @@ public class AdminCommands {
                             context.getSource().sendSuccess(new StringTextComponent("§a✅ Limpeza Automática Ativa"), false);
                             context.getSource().sendSuccess(new StringTextComponent("§a✅ Sistema de Tickets Profissional"), false);
                             context.getSource().sendSuccess(new StringTextComponent("§a✅ Sistema de Eventos Customizável"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Sistema de Autocomplete Inteligente"), false);
                             return 1;
                         })
                 )

@@ -35,6 +35,11 @@ public class ChatSystem {
         NexusBotMod.LOGGER.info("Sistema de Chat iniciado");
     }
 
+    // ========== GETTER PARA EVENT SYSTEM ==========
+    public EventSystem getEventSystem() {
+        return this.eventSystem;
+    }
+
     // ========== MÉTODOS FALTANTES PARA O MONITORCORE ==========
 
     /**

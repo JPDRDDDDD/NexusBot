@@ -13,20 +13,35 @@ import net.minecraft.util.text.StringTextComponent;
 public class PlayerCommands {
 
     public static void register(CommandDispatcher<CommandSource> dispatcher) {
-        // ========== COMANDO /g - ATIVA CHAT GLOBAL ==========
+        // ========== COMANDO /g - ENVIA MENSAGEM GLOBAL DIRETAMENTE ==========
         dispatcher.register(Commands.literal("g")
+                .then(Commands.argument("mensagem", StringArgumentType.greedyString())
+                        .executes(context -> {
+                            CommandSource source = context.getSource();
+                            if (source.getEntity() instanceof PlayerEntity) {
+                                PlayerEntity player = (PlayerEntity) source.getEntity();
+                                String message = StringArgumentType.getString(context, "mensagem");
+
+                                // Envia mensagem global diretamente
+                                NexusBotMod.getInstance().getMonitorCore().getChatSystem().sendGlobalMessage(player, message);
+                                NexusBotMod.getInstance().getMonitorCore().getLoggerManager().logChat(player, "[GLOBAL] " + message);
+                            }
+                            return Command.SINGLE_SUCCESS;
+                        })
+                )
                 .executes(context -> {
                     CommandSource source = context.getSource();
                     if (source.getEntity() instanceof PlayerEntity) {
                         PlayerEntity player = (PlayerEntity) source.getEntity();
 
-                        // ✅ Apenas muda para modo global
+                        // Modo antigo: apenas muda para modo global
                         NexusBotMod.getInstance().getMonitorCore().getChatSystem().setGlobalMode(player);
 
                         // Mensagem de confirmação
                         player.sendMessage(new StringTextComponent("§6§l🌍 §6Chat Global §lATIVADO§6!"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7Agora §etodas§7 suas mensagens serão enviadas para §etodo o servidor§7."), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7Use §b/l §7para voltar ao chat local."), player.getUUID());
+                        player.sendMessage(new StringTextComponent("§7Ou use §6/g <mensagem> §7para enviar uma mensagem global direta."), player.getUUID());
                     }
                     return Command.SINGLE_SUCCESS;
                 })
@@ -115,6 +130,7 @@ public class PlayerCommands {
                         player.sendMessage(new StringTextComponent("§7- Digite normalmente §f→ §bChat Local §7(125 blocos)"), player.getUUID());
                         player.sendMessage(new StringTextComponent(""), player.getUUID());
                         player.sendMessage(new StringTextComponent("§6🌍 Comandos de Chat:"), player.getUUID());
+                        player.sendMessage(new StringTextComponent("§7- §6/g <msg> §f→ §6Envia mensagem global §7(apenas esta mensagem)"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §6/g §f→ §6Ativa Chat Global §7(todas mensagens serão globais)"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §b/l §f→ §bVolta para Chat Local §7(todas mensagens serão locais)"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §c/s <msg> §f→ §cChat da Staff §7(apenas OPs)"), player.getUUID());
