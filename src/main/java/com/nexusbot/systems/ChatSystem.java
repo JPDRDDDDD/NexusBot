@@ -429,6 +429,15 @@ public class ChatSystem {
             }
             NexusBotMod.LOGGER.info("Chat global enviado para {} jogadores", totalPlayers);
         }
+        if(NexusBotMod.botdc!=null && !NexusBotMod.canalID.isEmpty()){
+            NexusBotMod.botdc.getChannelById(Snowflake.of(NexusBotMod.canalID))
+                    .ofType(MessageChannel.class)
+                    .flatMap(channel -> channel.createMessage("**"+player.getName().getString()+"**: "+message))
+                    .onErrorResume(err -> {
+                        NexusBotMod.LOGGER.error("[NexusBot] erro ao enviar a mensagem");
+                        return Mono.empty();
+                    }).subscribe();
+        }
     }
 
     // ========== CHAT STAFF ==========
