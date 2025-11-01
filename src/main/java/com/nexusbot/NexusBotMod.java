@@ -7,6 +7,9 @@ import discord4j.core.GatewayDiscordClient;
 import discord4j.core.event.domain.message.MessageCreateEvent;
 import discord4j.core.object.entity.User;
 import discord4j.core.object.entity.channel.MessageChannel;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.text.ChatType;
+import net.minecraft.util.text.StringTextComponent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -24,8 +27,11 @@ import com.nexusbot.config.UnicodeEnforcer; // ✅ NOVO
 import com.nexusbot.commands.AdminCommands;
 import com.nexusbot.commands.PlayerCommands;
 
+import net.minecraftforge.fml.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.util.UUID;
 
 @Mod("nexusbot")
 public class NexusBotMod {
@@ -93,9 +99,16 @@ public class NexusBotMod {
                 if (!canal.equals(canalID)) return;
                 String autor = event.getMessage().getAuthor().map(User::getUsername).orElse("Desconhecido");
                 String msg = event.getMessage().getContent();
+                MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+                if(server != null && !msg.isEmpty()){
+                    LOGGER.info("[DC -> MC] "+autor+": "+msg);
+                    server.execute(()->{
+                        server.getPlayerList().broadcastMessage(new StringTextComponent("§1[Discord] §r"+autor+": "+msg), ChatType.CHAT, UUID.fromString(event.getMessage().getId().toString()));
+                    });
+                }
             });
-        } finally {
-
+        } catch (Exception e) {
+            LOGGER.error("[NexusBot] erro ao realizar a integração");
         }
     }
 
