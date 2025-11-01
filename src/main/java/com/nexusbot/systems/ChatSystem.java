@@ -1,11 +1,14 @@
 package com.nexusbot.systems;
 
+import discord4j.common.util.Snowflake;
+import discord4j.core.object.entity.channel.MessageChannel;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.event.HoverEvent;
 import net.minecraft.world.server.ServerWorld;
 import com.nexusbot.NexusBotMod;
+import reactor.core.publisher.Mono;
 
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -310,6 +313,15 @@ public class ChatSystem {
                 totalPlayers++;
             }
             NexusBotMod.LOGGER.info("Chat global enviado para {} jogadores", totalPlayers);
+        }
+        if(NexusBotMod.botdc!=null && !NexusBotMod.canalID.isEmpty()){
+            NexusBotMod.botdc.getChannelById(Snowflake.of(NexusBotMod.canalID))
+                    .ofType(MessageChannel.class)
+                    .flatMap(channel -> channel.createMessage("**"+player.getName().getString()+"**: "+message))
+                    .onErrorResume(err -> {
+                        NexusBotMod.LOGGER.error("[NexusBot] erro ao enviar a mensagem");
+                        return Mono.empty();
+                    }).subscribe();
         }
     }
 
