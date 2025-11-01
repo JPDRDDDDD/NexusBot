@@ -2,6 +2,8 @@ package com.nexusbot.systems;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.SoundEvents;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.event.HoverEvent;
 import net.minecraft.world.server.ServerWorld;
@@ -23,6 +25,7 @@ public class ChatSystem {
     private Set<String> mutedPlayers = new HashSet<>();
     private Map<String, String> chatModes = new HashMap<>();
     private Map<String, String> customEvents = new HashMap<>();
+    private Map<String, String> lastTellTarget = new HashMap<>();
 
     private final ScheduledExecutorService botScheduler = Executors.newScheduledThreadPool(1);
     private final Random random = new Random();
@@ -552,22 +555,75 @@ public class ChatSystem {
         }
     }
 
-    // ========== MENSAGEM PRIVADA ==========
+    // ========== MENSAGEM PRIVADA COM SOM ==========
     public void sendPrivateMessage(PlayerEntity sender, String targetName, String message) {
         if (sender.getServer() == null) return;
 
         ServerPlayerEntity target = sender.getServer().getPlayerList().getPlayerByName(targetName);
         if (target != null) {
+            // Verifica se é mensagem para si mesmo
+            if (sender.getName().getString().equals(targetName)) {
+                sender.sendMessage(new StringTextComponent("§c§l❌ §cVocê não pode enviar mensagens para si mesmo!"), sender.getUUID());
+                return;
+            }
+
             String senderMessage = "§8[§d" + targetName + "§8] §7Você §8» §f" + message;
             String targetMessage = "§8[§d" + sender.getName().getString() + "§8] §7" + sender.getName().getString() + " §8» §f" + message;
 
+            // Envia mensagem para o remetente
             sender.sendMessage(new StringTextComponent(senderMessage), sender.getUUID());
+
+            // Envia mensagem para o destinatário
             target.sendMessage(new StringTextComponent(targetMessage), target.getUUID());
 
+            // ✅ CORREÇÃO: Toca som "Level Up" para o destinatário (Método Correto)
+            playLevelUpSound(target);
+
             NexusBotMod.LOGGER.info("MP: {} -> {}: {}", sender.getName().getString(), targetName, message);
+
+            // Salva último destinatário para sistema de resposta (/r)
+            lastTellTarget.put(sender.getName().getString(), targetName);
+
         } else {
             sender.sendMessage(new StringTextComponent("§c§l❌ §cJogador '§f" + targetName + "§c' não encontrado!"), sender.getUUID());
         }
+    }
+
+    // ========== SISTEMA DE SOM CORRIGIDO ==========
+    private void playLevelUpSound(ServerPlayerEntity player) {
+        try {
+            // ✅ CORREÇÃO: Método correto para tocar som para um jogador específico
+            // Usando playSound diretamente no jogador com volume alto (2.0F)
+            player.playSound(SoundEvents.PLAYER_LEVELUP, 2.0F, 1.0F);
+
+            // Log para debug
+            NexusBotMod.LOGGER.info("🔊 Som de Level Up tocado para: {} (Volume: 2.0)", player.getName().getString());
+
+        } catch (Exception e) {
+            NexusBotMod.LOGGER.error("❌ Erro ao tocar som para {}: {}", player.getName().getString(), e.getMessage());
+        }
+    }
+
+    // ========== SISTEMA DE RESPOSTA RÁPIDA (/r) ==========
+    public void sendReplyMessage(PlayerEntity sender, String message) {
+        String senderName = sender.getName().getString();
+        String lastTargetName = lastTellTarget.get(senderName);
+
+        if (lastTargetName == null) {
+            sender.sendMessage(new StringTextComponent("§c§l❌ §cVocê não tem ninguém para responder!"), sender.getUUID());
+            return;
+        }
+
+        if (sender.getServer() == null) return;
+
+        ServerPlayerEntity target = sender.getServer().getPlayerList().getPlayerByName(lastTargetName);
+        if (target == null) {
+            sender.sendMessage(new StringTextComponent("§c§l❌ §cO jogador '§f" + lastTargetName + "§c' está offline!"), sender.getUUID());
+            return;
+        }
+
+        // Reutiliza o método de mensagem privada
+        sendPrivateMessage(sender, lastTargetName, message);
     }
 
     // ========== DETECÇÃO DE PALAVRÕES ==========

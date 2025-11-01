@@ -109,6 +109,30 @@ public class PlayerCommands {
                 )
         );
 
+        // ========== COMANDO /r - RESPOSTA RÁPIDA ==========
+        dispatcher.register(Commands.literal("r")
+                .then(Commands.argument("mensagem", StringArgumentType.greedyString())
+                        .executes(context -> {
+                            CommandSource source = context.getSource();
+                            if (source.getEntity() instanceof PlayerEntity) {
+                                PlayerEntity player = (PlayerEntity) source.getEntity();
+                                String message = StringArgumentType.getString(context, "mensagem");
+
+                                NexusBotMod.getInstance().getMonitorCore().getChatSystem().sendReplyMessage(player, message);
+                            }
+                            return Command.SINGLE_SUCCESS;
+                        })
+                )
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    if (source.getEntity() instanceof PlayerEntity) {
+                        PlayerEntity player = (PlayerEntity) source.getEntity();
+                        player.sendMessage(new StringTextComponent("§c§l❌ §cUse: §f/r <mensagem> §cpara responder a última mensagem privada"), player.getUUID());
+                    }
+                    return Command.SINGLE_SUCCESS;
+                })
+        );
+
         // ========== COMANDO /cores - MOSTRA CÓDIGOS DE CORES ==========
         dispatcher.register(Commands.literal("cores")
                 .executes(context -> {
@@ -140,7 +164,8 @@ public class PlayerCommands {
                         player.sendMessage(new StringTextComponent("§7- §b/l <msg> §f→ §bEnvia mensagem local §7(apenas esta mensagem)"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §b/l §f→ §bAtiva Chat Local §7(todas mensagens serão locais)"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §c/s <msg> §f→ §cChat da Staff §7(apenas OPs)"), player.getUUID());
-                        player.sendMessage(new StringTextComponent("§7- §d/tell <nick> <msg> §f→ Mensagem Privada"), player.getUUID());
+                        player.sendMessage(new StringTextComponent("§7- §d/tell <nick> <msg> §f→ Mensagem Privada §a🔊"), player.getUUID());
+                        player.sendMessage(new StringTextComponent("§7- §d/r <msg> §f→ Resposta Rápida §a🔊"), player.getUUID());
                         player.sendMessage(new StringTextComponent("§7- §a/cores §f→ Mostra códigos de cores"), player.getUUID());
                         player.sendMessage(new StringTextComponent(""), player.getUUID());
                         player.sendMessage(new StringTextComponent("§a🎫 Sistema de Tickets:"), player.getUUID());
