@@ -1,12 +1,11 @@
 package com.nexusbot;
 
 import com.nexusbot.config.NexusDCBotConfig;
-import discord4j.common.util.Snowflake;
-import discord4j.core.DiscordClientBuilder;
-import discord4j.core.GatewayDiscordClient;
-import discord4j.core.event.domain.message.MessageCreateEvent;
-import discord4j.core.object.entity.User;
-import discord4j.core.object.entity.channel.MessageChannel;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.events.message.MessageReceivedEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.text.ChatType;
 import net.minecraft.util.text.StringTextComponent;
@@ -42,7 +41,7 @@ public class NexusBotMod {
     private MonitorCore monitorCore;
     private ConfigManager configManager;
 
-    public static GatewayDiscordClient botdc;
+    public static JDA botDC;
     public static String canalID;
 
     public NexusBotMod() {
@@ -74,39 +73,24 @@ public class NexusBotMod {
 
     }
     //BOT DISCORD
-    private void start(final FMLServerStartingEvent event){
+    @SubscribeEvent
+    public void onServerStart(final FMLServerStartingEvent event){
         String token = NexusDCBotConfig.COMMON.botToken.get();
-        iniciarBotDc(token);
+        new Thread(() -> iniciarBotDc(token), "NexusBot-DiscordThread").start();
     }
-    private void stop(final FMLServerStoppingEvent event){
-        if(botdc!=null){
-            botdc.getChannelById(Snowflake.of(canalID))
-                    .ofType(MessageChannel.class)
-                    .flatMap(channel -> channel.createMessage(":red_circle: **Servidor está off!**")).subscribe();
-            botdc.logout().block();
-        }
+    @SubscribeEvent
+    public void onServerStop(final FMLServerStoppingEvent event){
     }
     private void iniciarBotDc(String token){
         try {
-            botdc = DiscordClientBuilder.create(token).build().login().block();
-            if (botdc == null) {
+            if (token.isEmpty()) {
                 LOGGER.error("Integração com o Discord falhou!");
             }
-            botdc.getChannelById(Snowflake.of(canalID)).ofType(MessageChannel.class).flatMap(channel -> channel.createMessage(":green_circle: **Servidor está on**")).subscribe();
-            botdc.on(MessageCreateEvent.class).subscribe(event -> {
-                if (event.getMessage().getAuthor().map(User::isBot).orElse(true)) return;
-                String canal = event.getMessage().getChannelId().asString();
-                if (!canal.equals(canalID)) return;
-                String autor = event.getMessage().getAuthor().map(User::getUsername).orElse("Desconhecido");
-                String msg = event.getMessage().getContent();
-                MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-                if(server != null && !msg.isEmpty()){
-                    LOGGER.info("[DC -> MC] "+autor+": "+msg);
-                    server.execute(()->{
-                        server.getPlayerList().broadcastMessage(new StringTextComponent("§1[Discord] §r"+autor+": "+msg), ChatType.CHAT, UUID.fromString(event.getMessage().getId().toString()));
-                    });
-                }
-            });
+            botDC = JDABuilder.createDefault(token,GatewayIntent.GUILD_MESSAGES,GatewayIntent.MESSAGE_CONTENT)
+                    .addEventListeners(new DiscordListener())
+                    .build();
+            botDC.awaitReady();
+            System.out.println("[NexusBot] Bot do Discord iniciado!");
         } catch (Exception e) {
             LOGGER.error("[NexusBot] erro ao realizar a integração");
         }
@@ -128,5 +112,22 @@ public class NexusBotMod {
 
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+
+    public class DiscordListener extends ListenerAdapter {
+        public void onMessageReceived(MessageReceivedEvent event) {
+            if (event.getAuthor().isBot()) return;
+            if (!event.getChannel().getId().equals(canalID)) return;
+            MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
+            if (server != null) {
+                server.execute(() -> {
+                    server.getPlayerList().broadcastMessage(
+                            new StringTextComponent("§9[Discord] §r" + event.getAuthor().getName() + ": " + event.getMessage().getContentRaw()),
+                            ChatType.CHAT,
+                            UUID.randomUUID()
+                    );
+                });
+            }
+        }
     }
 }

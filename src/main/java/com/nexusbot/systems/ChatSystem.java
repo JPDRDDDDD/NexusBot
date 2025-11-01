@@ -1,5 +1,7 @@
 package com.nexusbot.systems;
 
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.SoundEvents;
@@ -13,6 +15,9 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import static com.nexusbot.NexusBotMod.botDC;
+import static com.nexusbot.NexusBotMod.canalID;
 
 public class ChatSystem {
     private Set<String> badWords = new HashSet<>(Arrays.asList(
@@ -100,12 +105,14 @@ public class ChatSystem {
         String playerName = player.getName().getString();
         String welcomeMessage = "👋 " + playerName + " entrou no servidor! Bem-vindo(a)!";
         sendBotMessage(welcomeMessage);
+        sendDiscordMessage(playerName,"Entrou no servidor");
     }
 
     public void onPlayerLeave(PlayerEntity player) {
         String playerName = player.getName().getString();
         String leaveMessage = "👋 " + playerName + " saiu do servidor. Até mais!";
         sendBotMessage(leaveMessage);
+        sendDiscordMessage(playerName,"Saiu do servidor");
     }
 
     public void onPlayerAdvancement(PlayerEntity player, String advancementName) {
@@ -118,6 +125,7 @@ public class ChatSystem {
         }
 
         NexusBotMod.LOGGER.info("🎯 Conquista: {} -> {}", playerName, advancementName);
+        sendDiscordMessage(playerName,"Conseguiu a conquista **"+advancementName+"**");
     }
 
     // ========== SISTEMA DE MENSAGENS PARA CONQUISTAS ==========
@@ -376,7 +384,18 @@ public class ChatSystem {
             NexusBotMod.LOGGER.info("NexusBot: {}", message);
         }
     }
+    public void sendDiscordMessage(String nome,String message){
+        // Envia também para o Discord
+        if (NexusBotMod.botDC == null || NexusBotMod.botDC.getStatus() != JDA.Status.CONNECTED) {
+            return;
+        }
 
+        TextChannel canal = NexusBotMod.botDC.getTextChannelById(NexusBotMod.canalID);
+        if (canal != null) {
+            // ✅ Usa queue() (assíncrono e seguro para evitar travar o servidor)
+            canal.sendMessage("🌐 **" +nome + ":** " + message).queue();
+        }
+    }
     // ========== SISTEMA PRINCIPAL DE CHAT ==========
     public void handlePlayerChat(PlayerEntity player, String message) {
         String playerName = player.getName().getString();
@@ -505,6 +524,19 @@ public class ChatSystem {
                 totalPlayers++;
             }
             NexusBotMod.LOGGER.info("Chat global enviado para {} jogadores", totalPlayers);
+        }
+        // Envia também para o Discord
+        if (NexusBotMod.botDC == null || NexusBotMod.botDC.getStatus() != JDA.Status.CONNECTED) {
+            NexusBotMod.LOGGER.warn("[Chat Global] Discord desconectado ou bot não iniciado.");
+            return;
+        }
+
+        TextChannel canal = NexusBotMod.botDC.getTextChannelById(NexusBotMod.canalID);
+        if (canal != null) {
+            // ✅ Usa queue() (assíncrono e seguro para evitar travar o servidor)
+            canal.sendMessage("🌐 **" + player.getName().getString() + ":** " + message).queue();
+        } else {
+            NexusBotMod.LOGGER.warn("[Chat Global] Canal do Discord não encontrado! ID inválido ou não configurado.");
         }
     }
 
