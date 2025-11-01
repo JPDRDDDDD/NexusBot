@@ -1,0 +1,24 @@
+modLoader="javafml"
+loaderVersion="[36,)"
+license="MIT"
+
+[[mods]]
+modId="nexusbot"
+version="2.3.6"
+displayName="NexusBot - Sistema de Moderação"
+description='''Sistema de moderação automática completo para servidores Minecraft.'''
+authors="NexusBot Team"
+
+[[dependencies.nexusbot]]
+modId="forge"
+mandatory=true
+versionRange="[36.2.42,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.nexusbot]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.16.5,1.17)"
+ordering="NONE"
+side="BOTH"
