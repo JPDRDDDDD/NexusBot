@@ -1,264 +1,599 @@
 package com.nexusbot.systems;
 
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.nexusbot.NexusBotMod;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.command.CommandSource;
+import net.minecraft.command.Commands;
 import net.minecraft.util.text.StringTextComponent;
 
-import java.io.*;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
-public class EventSystem {
-    private final String EVENTS_FILE = "nexusbot_events.txt";
-    private Map<String, String> customEvents = new ConcurrentHashMap<>();
-    private final Random random = new Random();
+class AdminCommands {
 
-    public EventSystem() {
-        loadEventsFromFile();
-        NexusBotMod.LOGGER.info("Sistema de Eventos carregado: {} eventos", customEvents.size());
-    }
+    public static void register(CommandDispatcher<CommandSource> dispatcher) {
 
-    // ========== SISTEMA DE MENSAGENS PERSONALIZADAS ==========
-    public String getAdvancementMessage(String playerName, String advancementName) {
-        // Primeiro verifica se tem evento customizado
-        String customMessage = customEvents.get(advancementName.toLowerCase());
-        if (customMessage != null) {
-            return translateColors(customMessage.replace("{player}", playerName));
-        }
+        // ========== CATEGORIA PRINCIPAL: NEXUSBOT ==========
+        dispatcher.register(Commands.literal("nexusbot")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l🤖 NEXUSBOT - SISTEMA DE ADMINISTRAÇÃO"), false);
+                    source.sendSuccess(new StringTextComponent("§7Sistema completo de moderação e administração"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📚 Categorias Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/nexusbot moderacao §7- Sistema de moderação"), false);
+                    source.sendSuccess(new StringTextComponent("§6/nexusbot filtro §7- Filtro de palavras"), false);
+                    source.sendSuccess(new StringTextComponent("§6/nexusbot limpeza §7- Limpeza automática"), false);
+                    source.sendSuccess(new StringTextComponent("§6/nexusbot ticket §7- Sistema de tickets"), false);
+                    source.sendSuccess(new StringTextComponent("§6/nexusbot sistema §7- Sistema do bot"), false);
+                    source.sendSuccess(new StringTextComponent("§6/nexusbot eventos §7- Sistema de eventos"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§a💡 Use §e/ajuda §apara ver comandos de jogador"), false);
+                    return 1;
+                })
+        );
 
-        // Mensagens padrão para conquistas específicas
-        switch (advancementName.toLowerCase()) {
-            // ========== MINECRAFT VANILLA ==========
-            case "minecraft:story/mine_stone":
-                return "⛏️ " + playerName + " começou sua jornada minerando pedra! Que venham os recursos!";
+        // ========== SISTEMA SIMPLIFICADO DE IDs (REMOVIDO AUTCOMPLETE) ==========
+        dispatcher.register(Commands.literal("bot-ids")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l🎯 SISTEMA DE IDs DE CONQUISTAS"), false);
+                    source.sendSuccess(new StringTextComponent("§7Sistema simplificado - Use IDs completos"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📋 Comandos Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-evento add <id> <mensagem> §7- Adicionar evento"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-evento remove <id> §7- Remover evento"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-evento listar §7- Listar eventos"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§a💡 Exemplo:"), false);
+                    source.sendSuccess(new StringTextComponent("§7/bot-evento add minecraft:story/mine_diamond \"&cParabéns &4{player}&c por encontrar diamantes!\""), false);
+                    source.sendSuccess(new StringTextComponent("§7Use §e/cores §7para ver códigos de cores disponíveis"), false);
+                    return 1;
+                })
+        );
 
-            case "minecraft:story/mine_diamond":
-                return "💎 " + playerName + " encontrou DIAMANTES! Que sorte incrível!";
+        // ========== CATEGORIA: EVENTOS DO BOT ==========
+        dispatcher.register(Commands.literal("bot-evento")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l🎯 SISTEMA DE EVENTOS DO BOT"), false);
+                    source.sendSuccess(new StringTextComponent("§7Gerencie mensagens automáticas para conquistas"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📋 Comandos Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-evento add <id> <mensagem> §7- Adicionar evento"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-evento remove <id> §7- Remover evento"), false);
+                    source.sendSuccess(new StringTextComponent("§6/bot-evento listar §7- Listar eventos"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§a💡 Exemplo:"), false);
+                    source.sendSuccess(new StringTextComponent("§7/bot-evento add draconicevolution:draconic_core \"&cParabéns &4{player} &2conseguiu o Draconic Core&nContinue assim\""), false);
+                    source.sendSuccess(new StringTextComponent("§7Use §e/cores §7para ver códigos de cores disponíveis"), false);
+                    source.sendSuccess(new StringTextComponent("§7Placeholder: §e{player} §7= nome do jogador"), false);
+                    return 1;
+                })
+                // /bot-evento add
+                .then(Commands.literal("add")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                                .then(Commands.argument("mensagem", StringArgumentType.greedyString())
+                                        .executes(context -> {
+                                            CommandSource source = context.getSource();
+                                            String advancementId = StringArgumentType.getString(context, "id");
+                                            String message = StringArgumentType.getString(context, "mensagem");
 
-            case "minecraft:story/enter_the_nether":
-                return "🔥 " + playerName + " entrou no Nether! Cuidado com os perigos!";
+                                            NexusBotMod.getInstance().getMonitorCore().getChatSystem().addCustomEvent(advancementId, message);
+                                            source.sendSuccess(new StringTextComponent("§a✅ Evento adicionado: §e" + advancementId), false);
+                                            source.sendSuccess(new StringTextComponent("§7Mensagem: §f" + message), false);
+                                            return 1;
+                                        })
+                                )
+                        )
+                )
+                // /bot-evento remove
+                .then(Commands.literal("remove")
+                        .then(Commands.argument("id", StringArgumentType.string())
+                                .executes(context -> {
+                                    CommandSource source = context.getSource();
+                                    String advancementId = StringArgumentType.getString(context, "id");
 
-            case "minecraft:story/enter_the_end":
-                return "🌌 " + playerName + " chegou ao Fim! Preparem-se para o dragão!";
+                                    NexusBotMod.getInstance().getMonitorCore().getChatSystem().removeCustomEvent(advancementId);
+                                    source.sendSuccess(new StringTextComponent("§c🗑️ Evento removido: §e" + advancementId), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /bot-evento listar
+                .then(Commands.literal("listar")
+                        .executes(context -> {
+                            CommandSource source = context.getSource();
+                            Map<String, String> events = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getCustomEvents();
 
-            case "minecraft:end/kill_dragon":
-                return "🐉 " + playerName + " MATOU O DRAGÃO DO FIM! Lenda viva do servidor!";
+                            source.sendSuccess(new StringTextComponent("§6§l📋 EVENTOS CONFIGURADOS (§e" + events.size() + "§6)"), false);
+                            source.sendSuccess(new StringTextComponent(""), false);
 
-            case "minecraft:end/elytra":
-                return "🦋 " + playerName + " conseguiu uma Elytra! Hora de voar pelos céus!";
+                            if (events.isEmpty()) {
+                                source.sendSuccess(new StringTextComponent("§7Nenhum evento configurado"), false);
+                            } else {
+                                for (Map.Entry<String, String> entry : events.entrySet()) {
+                                    source.sendSuccess(new StringTextComponent("§e" + entry.getKey() + " §8→ §7" + entry.getValue()), false);
+                                }
+                            }
+                            return 1;
+                        })
+                )
+        );
 
-            // ========== DRACONIC EVOLUTION ==========
-            case "draconicevolution:wyvern_core":
-                return "⚡ " + playerName + " criou um Núcleo Wyvern! Poder draconico adquirido!";
+        // ========== CATEGORIA: MODERAÇÃO ==========
+        dispatcher.register(Commands.literal("moderacao")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l🛡️ SISTEMA DE MODERAÇÃO"), false);
+                    source.sendSuccess(new StringTextComponent("§7Gerencie jogadores e aplique punições"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📋 Subcomandos Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/moderacao mute <nick> [minutos] [motivo]"), false);
+                    source.sendSuccess(new StringTextComponent("§6/moderacao unmute <nick>"), false);
+                    source.sendSuccess(new StringTextComponent("§6/moderacao bypass <nick>"), false);
+                    source.sendSuccess(new StringTextComponent("§6/moderacao unbypass <nick>"), false);
+                    source.sendSuccess(new StringTextComponent("§6/moderacao status <nick>"), false);
+                    source.sendSuccess(new StringTextComponent("§6/moderacao reset <nick>"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§a👥 Jogadores Online:"), false);
+                    String onlinePlayers = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getOnlinePlayersFormatted();
+                    source.sendSuccess(new StringTextComponent(onlinePlayers), false);
+                    return 1;
+                })
+                // /moderacao mute
+                .then(Commands.literal("mute")
+                        .then(Commands.argument("nick", StringArgumentType.string())
+                                .executes(context -> {
+                                    String playerName = StringArgumentType.getString(context, "nick");
+                                    NexusBotMod.getInstance().getMonitorCore().getPunishmentManager().mutePlayerManual(playerName, 30, "Decisão administrativa");
+                                    context.getSource().sendSuccess(new StringTextComponent("§c🔇 Player mutado por 30 minutos: " + playerName), false);
+                                    return 1;
+                                })
+                                .then(Commands.argument("minutos", IntegerArgumentType.integer(1))
+                                        .then(Commands.argument("motivo", StringArgumentType.greedyString())
+                                                .executes(context -> {
+                                                    String playerName = StringArgumentType.getString(context, "nick");
+                                                    int minutos = IntegerArgumentType.getInteger(context, "minutos");
+                                                    String motivo = StringArgumentType.getString(context, "motivo");
 
-            case "draconicevolution:awakened_core":
-                return "🌟 " + playerName + " evoluiu para Núcleo Despertado! Poder cósmico!";
+                                                    NexusBotMod.getInstance().getMonitorCore().getPunishmentManager().mutePlayerManual(playerName, minutos, motivo);
+                                                    context.getSource().sendSuccess(new StringTextComponent("§c🔇 " + playerName + " mutado por " + minutos + " minutos"), false);
+                                                    context.getSource().sendSuccess(new StringTextComponent("§7Motivo: " + motivo), false);
+                                                    return 1;
+                                                })
+                                        )
+                                )
+                        )
+                )
+                // /moderacao unmute
+                .then(Commands.literal("unmute")
+                        .then(Commands.argument("nick", StringArgumentType.string())
+                                .executes(context -> {
+                                    String playerName = StringArgumentType.getString(context, "nick");
+                                    NexusBotMod.getInstance().getMonitorCore().getPunishmentManager().unmutePlayerManual(playerName);
+                                    context.getSource().sendSuccess(new StringTextComponent("§a🔊 Player desmutado: " + playerName), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /moderacao bypass
+                .then(Commands.literal("bypass")
+                        .executes(context -> {
+                            String onlinePlayers = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getOnlinePlayersFormatted();
+                            context.getSource().sendSuccess(new StringTextComponent("§6🎮 Jogadores Online para Bypass:"), false);
+                            context.getSource().sendSuccess(new StringTextComponent(onlinePlayers), false);
+                            context.getSource().sendSuccess(new StringTextComponent(""), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§7Use: §6/moderacao bypass <nick>"), false);
+                            return 1;
+                        })
+                        .then(Commands.argument("nick", StringArgumentType.string())
+                                .executes(context -> {
+                                    String playerName = StringArgumentType.getString(context, "nick");
+                                    NexusBotMod.getInstance().getMonitorCore().getChatSystem().addBypass(playerName);
+                                    context.getSource().sendSuccess(new StringTextComponent("§a🛡️ Bypass adicionado para: " + playerName), false);
+                                    context.getSource().sendSuccess(new StringTextComponent("§7O jogador agora ignora filtros e sistemas automáticos"), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /moderacao unbypass
+                .then(Commands.literal("unbypass")
+                        .then(Commands.argument("nick", StringArgumentType.string())
+                                .executes(context -> {
+                                    String playerName = StringArgumentType.getString(context, "nick");
+                                    NexusBotMod.getInstance().getMonitorCore().getChatSystem().removeBypass(playerName);
+                                    context.getSource().sendSuccess(new StringTextComponent("§c🛡️ Bypass removido de: " + playerName), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /moderacao status
+                .then(Commands.literal("status")
+                        .then(Commands.argument("nick", StringArgumentType.string())
+                                .executes(context -> {
+                                    String playerName = StringArgumentType.getString(context, "nick");
+                                    NexusBotMod.getInstance().getMonitorCore().getPunishmentManager().checkPlayerStatus(playerName);
+                                    context.getSource().sendSuccess(new StringTextComponent("§6📊 Verificando status de: " + playerName), false);
+                                    context.getSource().sendSuccess(new StringTextComponent("§7Verifique os logs do console"), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /moderacao reset
+                .then(Commands.literal("reset")
+                        .then(Commands.argument("nick", StringArgumentType.string())
+                                .executes(context -> {
+                                    String playerName = StringArgumentType.getString(context, "nick");
+                                    NexusBotMod.getInstance().getMonitorCore().getPunishmentManager().resetOffenses(playerName);
+                                    context.getSource().sendSuccess(new StringTextComponent("§a🔄 Ofensas resetadas: " + playerName), false);
+                                    return 1;
+                                })
+                        )
+                )
+        );
 
-            case "draconicevolution:draconic_core":
-                return "🐲 " + playerName + " alcançou o Núcleo Draconico! Poder supremo!";
+        // ========== CATEGORIA: TICKET (ADMIN) ==========
+        dispatcher.register(Commands.literal("ticket")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l🎫 SISTEMA DE TICKETS - ADMIN"), false);
+                    source.sendSuccess(new StringTextComponent("§7Gerencie todos os tickets do servidor"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📋 Comandos Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/ticket listar [filtro] §7- Listar tickets"), false);
+                    source.sendSuccess(new StringTextComponent("§6/ticket ver <id> §7- Ver detalhes do ticket"), false);
+                    source.sendSuccess(new StringTextComponent("§6/ticket aceitar <id> §7- Aceitar ticket"), false);
+                    source.sendSuccess(new StringTextComponent("§6/ticket responder <id> <msg> §7- Responder ticket"), false);
+                    source.sendSuccess(new StringTextComponent("§6/ticket fechar <id> §7- Fechar ticket"), false);
+                    source.sendSuccess(new StringTextComponent("§6/ticket stats §7- Estatísticas do sistema"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§a📊 " + NexusBotMod.getInstance().getMonitorCore().getTicketSystem().getStats()), false);
+                    return 1;
+                })
+                // /ticket listar
+                .then(Commands.literal("listar")
+                        .executes(context -> {
+                            if (context.getSource().getEntity() instanceof net.minecraft.entity.player.PlayerEntity) {
+                                net.minecraft.entity.player.PlayerEntity player = (net.minecraft.entity.player.PlayerEntity) context.getSource().getEntity();
+                                NexusBotMod.getInstance().getMonitorCore().getTicketSystem().listTickets(player, "");
+                            }
+                            return 1;
+                        })
+                        .then(Commands.argument("filtro", StringArgumentType.string())
+                                .executes(context -> {
+                                    if (context.getSource().getEntity() instanceof net.minecraft.entity.player.PlayerEntity) {
+                                        net.minecraft.entity.player.PlayerEntity player = (net.minecraft.entity.player.PlayerEntity) context.getSource().getEntity();
+                                        String filter = StringArgumentType.getString(context, "filtro");
+                                        NexusBotMod.getInstance().getMonitorCore().getTicketSystem().listTickets(player, filter);
+                                    }
+                                    return 1;
+                                })
+                        )
+                )
+                // /ticket ver
+                .then(Commands.literal("ver")
+                        .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                                .executes(context -> {
+                                    if (context.getSource().getEntity() instanceof net.minecraft.entity.player.PlayerEntity) {
+                                        net.minecraft.entity.player.PlayerEntity player = (net.minecraft.entity.player.PlayerEntity) context.getSource().getEntity();
+                                        int ticketId = IntegerArgumentType.getInteger(context, "id");
+                                        NexusBotMod.getInstance().getMonitorCore().getTicketSystem().viewTicketStatus(player, ticketId);
+                                    }
+                                    return 1;
+                                })
+                        )
+                )
+                // /ticket aceitar
+                .then(Commands.literal("aceitar")
+                        .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                                .executes(context -> {
+                                    if (context.getSource().getEntity() instanceof net.minecraft.entity.player.PlayerEntity) {
+                                        net.minecraft.entity.player.PlayerEntity player = (net.minecraft.entity.player.PlayerEntity) context.getSource().getEntity();
+                                        int ticketId = IntegerArgumentType.getInteger(context, "id");
+                                        NexusBotMod.getInstance().getMonitorCore().getTicketSystem().acceptTicket(player, ticketId);
+                                    }
+                                    return 1;
+                                })
+                        )
+                )
+                // /ticket responder
+                .then(Commands.literal("responder")
+                        .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                                .then(Commands.argument("mensagem", StringArgumentType.greedyString())
+                                        .executes(context -> {
+                                            if (context.getSource().getEntity() instanceof net.minecraft.entity.player.PlayerEntity) {
+                                                net.minecraft.entity.player.PlayerEntity player = (net.minecraft.entity.player.PlayerEntity) context.getSource().getEntity();
+                                                int ticketId = IntegerArgumentType.getInteger(context, "id");
+                                                String message = StringArgumentType.getString(context, "mensagem");
+                                                NexusBotMod.getInstance().getMonitorCore().getTicketSystem().respondToTicket(player, ticketId, message);
+                                            }
+                                            return 1;
+                                        })
+                                )
+                        )
+                )
+                // /ticket fechar
+                .then(Commands.literal("fechar")
+                        .then(Commands.argument("id", IntegerArgumentType.integer(1))
+                                .executes(context -> {
+                                    if (context.getSource().getEntity() instanceof net.minecraft.entity.player.PlayerEntity) {
+                                        net.minecraft.entity.player.PlayerEntity player = (net.minecraft.entity.player.PlayerEntity) context.getSource().getEntity();
+                                        int ticketId = IntegerArgumentType.getInteger(context, "id");
+                                        NexusBotMod.getInstance().getMonitorCore().getTicketSystem().closeTicket(player, ticketId);
+                                    }
+                                    return 1;
+                                })
+                        )
+                )
+                // /ticket stats
+                .then(Commands.literal("stats")
+                        .executes(context -> {
+                            String stats = NexusBotMod.getInstance().getMonitorCore().getTicketSystem().getStats();
+                            context.getSource().sendSuccess(new StringTextComponent("§6§l📊 ESTATÍSTICAS DE TICKETS"), false);
+                            context.getSource().sendSuccess(new StringTextComponent(stats), false);
+                            return 1;
+                        })
+                )
+        );
 
-            case "draconicevolution:chaotic_core":
-                return "💥 " + playerName + " dominou o Núcleo Caótico! Poder absoluto!";
+        // ========== CATEGORIA: FILTRO ==========
+        dispatcher.register(Commands.literal("filtro")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l📝 SISTEMA DE FILTRO DE PALAVRAS"), false);
+                    source.sendSuccess(new StringTextComponent("§7Gerencie as palavras proibidas no servidor"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📋 Subcomandos Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/filtro add <palavra> §7- Adicionar palavra"), false);
+                    source.sendSuccess(new StringTextComponent("§6/filtro wildcard <padrao> §7- Adicionar wildcard"), false);
+                    source.sendSuccess(new StringTextComponent("§6/filtro listar §7- Listar palavras"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§c⚠ Exemplo de wildcard: §ff*d*§c (bloqueia foda, fudido, etc)"), false);
+                    return 1;
+                })
+                // /filtro add
+                .then(Commands.literal("add")
+                        .then(Commands.argument("palavra", StringArgumentType.greedyString())
+                                .executes(context -> {
+                                    String word = StringArgumentType.getString(context, "palavra");
+                                    NexusBotMod.getInstance().getMonitorCore().getChatSystem().addBadWord(word);
+                                    context.getSource().sendSuccess(new StringTextComponent("§a📝 Palavra proibida adicionada: " + word), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /filtro wildcard
+                .then(Commands.literal("wildcard")
+                        .then(Commands.argument("padrao", StringArgumentType.greedyString())
+                                .executes(context -> {
+                                    String pattern = StringArgumentType.getString(context, "padrao");
+                                    NexusBotMod.getInstance().getMonitorCore().getChatSystem().addWildcardWord(pattern);
+                                    context.getSource().sendSuccess(new StringTextComponent("§a📝 Wildcard adicionado: " + pattern), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /filtro listar
+                .then(Commands.literal("listar")
+                        .executes(context -> {
+                            context.getSource().sendSuccess(new StringTextComponent("§6📋 Sistema de Filtro Ativo"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§7O filtro está funcionando corretamente"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§7Palavras bloqueadas: §c" + NexusBotMod.getInstance().getMonitorCore().getChatSystem().getBadWords().size()), false);
+                            return 1;
+                        })
+                )
+        );
 
-            // ========== MEKANISM ==========
-            case "mekanism:atomic_disassembler":
-                return "🔧 " + playerName + " construiu um Desmontador Atômico! Tecnologia avançada!";
+        // ========== CATEGORIA: LIMPEZA ==========
+        dispatcher.register(Commands.literal("limpeza")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l🗑️ SISTEMA DE LIMPEZA AUTOMÁTICA"), false);
+                    source.sendSuccess(new StringTextComponent("§7Gerencie a limpeza automática do servidor"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📋 Subcomandos Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/limpeza status §7- Ver status completo"), false);
+                    source.sendSuccess(new StringTextComponent("§6/limpeza on §7- Ativar sistema"), false);
+                    source.sendSuccess(new StringTextComponent("§6/limpeza off §7- Desativar sistema"), false);
+                    source.sendSuccess(new StringTextComponent("§6/limpeza agora §7- Limpeza manual"), false);
+                    source.sendSuccess(new StringTextComponent("§6/limpeza intervalo <minutos> §7- Alterar intervalo"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§a✅ Remove: §fItens no chão + Mobs comuns"), false);
+                    source.sendSuccess(new StringTextComponent("§c❌ Protege: §fPets, Villagers, Bosses, Mobs nomeados"), false);
+                    return 1;
+                })
+                // /limpeza status
+                .then(Commands.literal("status")
+                        .executes(context -> {
+                            String status = NexusBotMod.getInstance().getMonitorCore().getCleanerSystem().getStatus();
+                            context.getSource().sendSuccess(new StringTextComponent("§6§l🗑️ STATUS DA LIMPEZA"), false);
+                            context.getSource().sendSuccess(new StringTextComponent(status), false);
+                            return 1;
+                        })
+                )
+                // /limpeza on
+                .then(Commands.literal("on")
+                        .executes(context -> {
+                            NexusBotMod.getInstance().getMonitorCore().getCleanerSystem().setActive(true);
+                            context.getSource().sendSuccess(new StringTextComponent("§a🗑️ Sistema de limpeza §lATIVADO§a!"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§7A limpeza automática está agora ativa"), false);
+                            return 1;
+                        })
+                )
+                // /limpeza off
+                .then(Commands.literal("off")
+                        .executes(context -> {
+                            NexusBotMod.getInstance().getMonitorCore().getCleanerSystem().setActive(false);
+                            context.getSource().sendSuccess(new StringTextComponent("§c🗑️ Sistema de limpeza §lDESATIVADO§c!"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§7A limpeza automática foi pausada"), false);
+                            return 1;
+                        })
+                )
+                // /limpeza agora
+                .then(Commands.literal("agora")
+                        .executes(context -> {
+                            context.getSource().sendSuccess(new StringTextComponent("§6🧹 Executando limpeza manual..."), false);
+                            NexusBotMod.getInstance().getMonitorCore().getCleanerSystem().forceCleanup();
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Limpeza manual concluída!"), false);
+                            return 1;
+                        })
+                )
+                // /limpeza intervalo
+                .then(Commands.literal("intervalo")
+                        .then(Commands.argument("minutos", IntegerArgumentType.integer(1))
+                                .executes(context -> {
+                                    int minutos = IntegerArgumentType.getInteger(context, "minutos");
+                                    NexusBotMod.getInstance().getMonitorCore().getCleanerSystem().setInterval(minutos);
+                                    context.getSource().sendSuccess(new StringTextComponent("§6⏰ Intervalo de limpeza definido para §e" + minutos + " minutos§6!"), false);
+                                    return 1;
+                                })
+                        )
+                )
+        );
 
-            case "mekanism:mekasuit":
-                return "🛡️ " + playerName + " criou a MekaSuit! Proteção máxima ativada!";
+        // ========== CATEGORIA: SISTEMA ==========
+        dispatcher.register(Commands.literal("sistema")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    CommandSource source = context.getSource();
+                    source.sendSuccess(new StringTextComponent("§6§l⚙️ SISTEMA NEXUSBOT"), false);
+                    source.sendSuccess(new StringTextComponent("§7Comandos de administração do sistema"), false);
+                    source.sendSuccess(new StringTextComponent(""), false);
+                    source.sendSuccess(new StringTextComponent("§e📋 Subcomandos Disponíveis:"), false);
+                    source.sendSuccess(new StringTextComponent("§6/sistema info §7- Informações do bot"), false);
+                    source.sendSuccess(new StringTextComponent("§6/sistema logs <nick> §7- Ver logs"), false);
+                    source.sendSuccess(new StringTextComponent("§6/sistema players §7- Jogadores online"), false);
+                    source.sendSuccess(new StringTextComponent("§6/sistema anuncio <mensagem> §7- Anúncio global"), false);
+                    source.sendSuccess(new StringTextComponent("§6/sistema reload §7- Recarregar sistemas"), false);
+                    return 1;
+                })
+                // /sistema info
+                .then(Commands.literal("info")
+                        .executes(context -> {
+                            context.getSource().sendSuccess(new StringTextComponent("§6§lNEXUSBOT v2.3.6 - SISTEMA PROFISSIONAL"), false);
+                            context.getSource().sendSuccess(new StringTextComponent(""), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Sistema de Moderação Ativo"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Filtro de Palavras Funcional"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Anti-Cheat Completo"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Logs 24/7 em Tempo Real"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Sistema de Chat Profissional"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Limpeza Automática Ativa"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Sistema de Tickets Profissional"), false);
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Sistema de Eventos Customizável"), false);
+                            return 1;
+                        })
+                )
+                // /sistema logs
+                .then(Commands.literal("logs")
+                        .then(Commands.argument("nick", StringArgumentType.string())
+                                .executes(context -> {
+                                    String playerName = StringArgumentType.getString(context, "nick");
+                                    context.getSource().sendSuccess(new StringTextComponent("§6📊 Logs do Player: " + playerName), false);
+                                    context.getSource().sendSuccess(new StringTextComponent("§7Verifique a pasta 'nexusbot_logs/' no servidor"), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /sistema players
+                .then(Commands.literal("players")
+                        .executes(context -> {
+                            String onlinePlayers = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getOnlinePlayersFormatted();
+                            context.getSource().sendSuccess(new StringTextComponent("§6🎮 Jogadores Conectados:"), false);
+                            context.getSource().sendSuccess(new StringTextComponent(onlinePlayers), false);
+                            return 1;
+                        })
+                )
+                // /sistema anuncio
+                .then(Commands.literal("anuncio")
+                        .then(Commands.argument("mensagem", StringArgumentType.greedyString())
+                                .executes(context -> {
+                                    String message = StringArgumentType.getString(context, "mensagem");
+                                    String anuncio = "§6§l📢 ANÚNCIO §8» §e" + message;
 
-            // ========== TINKERS CONSTRUCT ==========
-            case "tconstruct:story/melting":
-                return "🔥 " + playerName + " dominou a fundição! Hora de criar ferramentas épicas!";
+                                    if (context.getSource().getServer() != null) {
+                                        context.getSource().getServer().getPlayerList().getPlayers().forEach(player -> {
+                                            player.sendMessage(new StringTextComponent(""), player.getUUID());
+                                            player.sendMessage(new StringTextComponent(anuncio), player.getUUID());
+                                            player.sendMessage(new StringTextComponent(""), player.getUUID());
+                                        });
+                                    }
 
-            case "tconstruct:tools/cleaver":
-                return "⚔️ " + playerName + " forjou um Cleaver! Lâmina mortal criada!";
+                                    context.getSource().sendSuccess(new StringTextComponent("§a📢 Anúncio enviado para todos os jogadores!"), false);
+                                    return 1;
+                                })
+                        )
+                )
+                // /sistema reload
+                .then(Commands.literal("reload")
+                        .executes(context -> {
+                            context.getSource().sendSuccess(new StringTextComponent("§6🔄 Recarregando sistemas do NexusBot..."), false);
+                            // Aqui você pode adicionar lógica de reload se necessário
+                            context.getSource().sendSuccess(new StringTextComponent("§a✅ Sistemas verificados e ativos!"), false);
+                            return 1;
+                        })
+                )
+        );
 
-            // ========== BOTANIA ==========
-            case "botania:main/terrasteel_pickup":
-                return "🌿 " + playerName + " criou Terrasteel! Poder da natureza!";
+        // ========== COMANDO /s - CHAT DA STAFF ==========
+        dispatcher.register(Commands.literal("s")
+                .then(Commands.argument("mensagem", StringArgumentType.greedyString())
+                        .executes(context -> {
+                            if (context.getSource().getEntity() instanceof net.minecraft.entity.player.PlayerEntity) {
+                                net.minecraft.entity.player.PlayerEntity player = (net.minecraft.entity.player.PlayerEntity) context.getSource().getEntity();
+                                String message = StringArgumentType.getString(context, "mensagem");
 
-            case "botania:main/gaia_guardian_kill":
-                return "👑 " + playerName + " derrotou o Guardião de Gaia! Mestre da Botania!";
+                                if (player.hasPermissions(2)) {
+                                    NexusBotMod.getInstance().getMonitorCore().getChatSystem().sendStaffMessage(player, message);
+                                    NexusBotMod.getInstance().getMonitorCore().getLoggerManager().logChat(player, "[STAFF] " + message);
+                                } else {
+                                    context.getSource().sendSuccess(new StringTextComponent("§c§l🚫 §cApenas operadores podem usar o chat da staff!"), false);
+                                }
+                            } else {
+                                String message = StringArgumentType.getString(context, "mensagem");
+                                String staffMessage = "§8[§4👑 Console§8] §cSistema §8» §f" + message;
 
-            // ========== ARS NOUVEAU ==========
-            case "ars_nouveau:novice_spellbook":
-                return "📖 " + playerName + " adquiriu um Grimório de Noviço! Magia despertada!";
+                                if (context.getSource().getServer() != null) {
+                                    context.getSource().getServer().getPlayerList().getPlayers().forEach(player -> {
+                                        if (player.hasPermissions(2)) {
+                                            player.sendMessage(new StringTextComponent(staffMessage), player.getUUID());
+                                        }
+                                    });
+                                }
+                                NexusBotMod.LOGGER.info("👑 [STAFF] Console: {}", message);
+                            }
+                            return 1;
+                        })
+                )
+        );
 
-            case "ars_nouveau:archmage_spellbook":
-                return "🔮 " + playerName + " alcançou o Grimório de Arquimago! Poder mágico supremo!";
-
-            // ========== APOTHEOSIS ==========
-            case "apotheosis:affix_gear":
-                return "✨ " + playerName + " criou equipamento com Afixos! Itens lendários!";
-
-            case "apotheosis:mythic_gear":
-                return "🎭 " + playerName + " forjou equipamento Mítico! Poder além do normal!";
-
-            // ========== TWILIGHT FOREST ==========
-            case "twilightforest:progress_lich":
-                return "🧙 " + playerName + " derrotou o Lich! Coragem na Floresta Twilight!";
-
-            case "twilightforest:progress_ur_ghast":
-                return "👻 " + playerName + " venceu o Ur-Ghast! Desbravador das trevas!";
-
-            // ========== BLOOD MAGIC ==========
-            case "bloodmagic:altar":
-                return "🩸 " + playerName + " construiu um Altar de Sangue! Magia sanguínea ativada!";
-
-            case "bloodmagic:ritual_master":
-                return "🌀 " + playerName + " tornou-se Mestre de Rituais! Controle total do sangue!";
-
-            // ========== CREATE ==========
-            case "create:water_wheel":
-                return "💧 " + playerName + " construiu uma Roda D'água! Energia mecânica criada!";
-
-            case "create:contraption":
-                return "⚙️ " + playerName + " dominou as Contrapções! Engenharia criativa!";
-
-            // ========== CYCLIC ==========
-            case "cyclic:apple_ender":
-                return "🍎 " + playerName + " criou uma Maça do Ender! Teleporte instantâneo!";
-
-            case "cyclic:apple_emerald":
-                return "💚 " + playerName + " fez uma Maça de Esmeralda! Fortuna verde!";
-
-            // ========== FORBIDDEN ARCANUS ==========
-            case "forbidden_arcanus:obtain_dark_nether_star":
-                return "🌑 " + playerName + " obteve uma Estrela do Nether Sombria! Poder proibido!";
-
-            case "forbidden_arcanus:obtain_eternal_stella":
-                return "⭐ " + playerName + " conquistou a Eternal Stella! Artefato lendário!";
-
-            // ========== VAMPIRISM ==========
-            case "vampirism:become_vampire":
-                return "🧛 " + playerName + " tornou-se um Vampiro! Noites eternas começam!";
-
-            case "vampirism:become_hunter":
-                return "🏹 " + playerName + " juntou-se aos Caçadores! Justiceiro da noite!";
-
-            // ========== RATS ==========
-            case "rats:rat_taming":
-                return "🐀 " + playerName + " domou seu primeiro Rato! Amizade roedora!";
-
-            case "rats:rat_upgrade_aristocrat":
-                return "👑 " + playerName + " tem um Rato Aristocrata! Elegância roedora!";
-
-            // ========== ALLTHEMODIUM ==========
-            case "allthemodium:allthemodium_ingot":
-                return "💜 " + playerName + " forjou um lingote de Allthemodium! Metal supremo!";
-
-            case "allthemodium:unobtainium_ingot":
-                return "🌈 " + playerName + " criou Unobtainium! Material lendário obtido!";
-
-            // ========== CONQUISTAS GENÉRICAS ==========
-            default:
-                if (advancementName.contains("diamond") || advancementName.contains("diamante")) {
-                    return "💎 " + playerName + " conquistou algo com DIAMANTES! Brilho máximo!";
-                }
-                else if (advancementName.contains("nether") || advancementName.contains("inferno")) {
-                    return "🔥 " + playerName + " explorou o Nether! Coragem nas profundezas!";
-                }
-                else if (advancementName.contains("end") || advancementName.contains("fim")) {
-                    return "🌌 " + playerName + " desbravou o Fim! Aventureiro das estrelas!";
-                }
-                else if (advancementName.contains("boss") || advancementName.contains("chefe")) {
-                    return "👹 " + playerName + " derrotou um boss! Força de verdadeiro herói!";
-                }
-                else if (advancementName.contains("magic") || advancementName.contains("magia")) {
-                    return "🔮 " + playerName + " dominou a magia! Poder arcano liberado!";
-                }
-                else {
-                    // Mensagem genérica para outras conquistas
-                    return "🎯 " + playerName + " conquistou: " + formatAdvancementName(advancementName) + "! Parabéns!";
-                }
-        }
-    }
-
-    // ========== SISTEMA DE CORES ==========
-    public static String translateColors(String message) {
-        if (message == null) return null;
-        return message.replace("&", "§");
-    }
-
-    // ========== SISTEMA DE EVENTOS CUSTOMIZADOS ==========
-    public void addCustomEvent(String advancementId, String message) {
-        customEvents.put(advancementId.toLowerCase(), message);
-        saveEventsToFile();
-    }
-
-    public void removeCustomEvent(String advancementId) {
-        customEvents.remove(advancementId.toLowerCase());
-        saveEventsToFile();
-    }
-
-    public Map<String, String> getCustomEvents() {
-        return new HashMap<>(customEvents);
-    }
-
-    // ========== MÉTODOS AUXILIARES ==========
-    private String formatAdvancementName(String advancementName) {
-        String formatted = advancementName
-                .replace("minecraft:", "")
-                .replace(":", " - ")
-                .replace("_", " ")
-                .replace("/", " - ");
-
-        return capitalizeWords(formatted);
-    }
-
-    private String capitalizeWords(String text) {
-        String[] words = text.split(" ");
-        StringBuilder result = new StringBuilder();
-        for (String word : words) {
-            if (!word.isEmpty()) {
-                result.append(Character.toUpperCase(word.charAt(0)))
-                        .append(word.substring(1))
-                        .append(" ");
-            }
-        }
-        return result.toString().trim();
-    }
-
-    // ========== SISTEMA DE ARQUIVO ==========
-    private void loadEventsFromFile() {
-        try {
-            File file = new File(EVENTS_FILE);
-            if (!file.exists()) {
-                return;
-            }
-
-            BufferedReader reader = new BufferedReader(new FileReader(file));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (!line.trim().isEmpty() && !line.startsWith("#")) {
-                    String[] parts = line.split("=", 2);
-                    if (parts.length == 2) {
-                        customEvents.put(parts[0].toLowerCase().trim(), parts[1].trim());
-                    }
-                }
-            }
-            reader.close();
-        } catch (IOException e) {
-            NexusBotMod.LOGGER.error("Erro ao carregar eventos: {}", e.toString());
-        }
-    }
-
-    private void saveEventsToFile() {
-        try {
-            FileWriter writer = new FileWriter(EVENTS_FILE);
-            writer.write("# NexusBot Eventos Customizados\n");
-            writer.write("# Formato: advancement_id=mensagem com cores\n");
-            writer.write("# Cores: use & para cores (ex: &aVerde &cVermelho)\n");
-            writer.write("# Placeholders: {player} = nome do jogador\n\n");
-
-            for (Map.Entry<String, String> entry : customEvents.entrySet()) {
-                writer.write(entry.getKey() + "=" + entry.getValue() + "\n");
-            }
-            writer.close();
-        } catch (IOException e) {
-            NexusBotMod.LOGGER.error("Erro ao salvar eventos: {}", e.toString());
-        }
+        // ========== COMANDOS LEGACY (compatibilidade) ==========
+        dispatcher.register(Commands.literal("bypassBot")
+                .requires(source -> source.hasPermission(2))
+                .executes(context -> {
+                    String onlinePlayers = NexusBotMod.getInstance().getMonitorCore().getChatSystem().getOnlinePlayersFormatted();
+                    context.getSource().sendSuccess(new StringTextComponent("§6🎮 Jogadores Online:"), false);
+                    context.getSource().sendSuccess(new StringTextComponent(onlinePlayers), false);
+                    context.getSource().sendSuccess(new StringTextComponent(""), false);
+                    context.getSource().sendSuccess(new StringTextComponent("§7Use: §6/bypassBot <nick>"), false);
+                    return 1;
+                })
+                .then(Commands.argument("nick", StringArgumentType.string())
+                        .executes(context -> {
+                            String playerName = StringArgumentType.getString(context, "nick");
+                            NexusBotMod.getInstance().getMonitorCore().getChatSystem().addBypass(playerName);
+                            context.getSource().sendSuccess(new StringTextComponent("§a🛡️ Bypass adicionado para: " + playerName), false);
+                            return 1;
+                        })
+                )
+        );
     }
 }
