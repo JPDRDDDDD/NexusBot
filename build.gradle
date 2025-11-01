@@ -55,6 +55,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.16.5-36.2.42'
+    implementation "com.discord4j:discord4j-core:3.3.0"
 }
 
 jar {
