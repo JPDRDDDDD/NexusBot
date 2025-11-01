@@ -1,9 +1,0 @@
-Manifest-Version: 1.0
-Specification-Title: nexusbot
-Specification-Vendor: nexusbot
-Specification-Version: 1
-Implementation-Title: NexusBot
-Implementation-Version: 2.3.6
-Implementation-Vendor: nexusbot
-Implementation-Timestamp: 2025-11-01T02:23:43-0300
-

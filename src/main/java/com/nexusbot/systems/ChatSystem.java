@@ -103,195 +103,31 @@ public class ChatSystem {
 
     public void onPlayerJoin(PlayerEntity player) {
         String playerName = player.getName().getString();
-        String welcomeMessage = playerName + " entrou no servidor! Bem-vindo(a)!";
+        String welcomeMessage = "👋 " + playerName + " entrou no servidor! Bem-vindo(a)!";
         sendBotMessage(welcomeMessage);
     }
 
     public void onPlayerLeave(PlayerEntity player) {
         String playerName = player.getName().getString();
-        String leaveMessage = playerName + " saiu do servidor. Ate mais!";
+        String leaveMessage = "👋 " + playerName + " saiu do servidor. Até mais!";
         sendBotMessage(leaveMessage);
     }
 
     public void onPlayerAdvancement(PlayerEntity player, String advancementName) {
         String playerName = player.getName().getString();
 
-        // ✅ LOG PARA FACILITAR A DESCOBERTA DOS IDs
-        eventSystem.logAdvancementDetection(player, advancementName);
-
-        // Primeiro verifica se tem evento customizado
-        String customMessage = eventSystem.getCustomEventMessage(advancementName, playerName);
-        if (customMessage != null) {
-            sendBotMessage(customMessage);
-            return;
-        }
-
-        // Se não tiver, usa as mensagens padrão
-        String message = getAdvancementMessage(playerName, advancementName);
+        // Obter mensagem personalizada do EventSystem
+        String message = eventSystem.getAdvancementMessage(playerName, advancementName);
         if (message != null) {
             sendBotMessage(message);
         }
-    }
 
-    private String getAdvancementMessage(String playerName, String advancementName) {
-        // Conquistas do Minecraft Vanilla
-        switch (advancementName.toLowerCase()) {
-            // Mineração
-            case "minecraft:story/mine_stone":
-            case "minecraft.story.mine_stone":
-                return playerName + " comecou sua jornada minerando! Que venham os recursos!";
-
-            case "minecraft:story/iron_tools":
-            case "minecraft.story.iron_tools":
-                return playerName + " agora tem ferramentas de ferro! Hora de melhorar!";
-
-            case "minecraft:story/mine_diamond":
-            case "minecraft.story.mine_diamond":
-                String randomPlayer = getRandomOnlinePlayer();
-                return playerName + " encontrou DIAMANTES! " + randomPlayer + ", voce tambem quer uns?";
-
-            case "minecraft:story/enchant_item":
-            case "minecraft.story.enchant_item":
-                return playerName + " encantou um item! Magia no ar!";
-
-            // Nether
-            case "minecraft:story/enter_the_nether":
-            case "minecraft.story.enter_the_nether":
-                return playerName + " entrou no Nether! Cuidado com os perigos!";
-
-            case "minecraft:story/find_fortress":
-            case "minecraft.story.find_fortress":
-                return playerName + " encontrou uma fortaleza do Nether! Hora da aventura!";
-
-            // Fim
-            case "minecraft:story/enter_the_end":
-            case "minecraft.story.enter_the_end":
-                return playerName + " chegou ao Fim! Preparem-se para o dragao, galera!";
-
-            // Agricultura
-            case "minecraft:husbandry/plant_seed":
-            case "minecraft.husbandry.plant_seed":
-                return playerName + " comecou uma plantacao! Futuro fazendeiro!";
-
-            case "minecraft:husbandry/breed_an_animal":
-            case "minecraft.husbandry.breed_an_animal":
-                return playerName + " esta criando animais! Que fofura!";
-
-            // Combate
-            case "minecraft:adventure/kill_a_mob":
-            case "minecraft.adventure.kill_a_mob":
-                return playerName + " derrotou seu primeiro mob! Guerreiro em formacao!";
-
-            case "minecraft:adventure/kill_all_mobs":
-            case "minecraft.adventure.kill_all_mobs":
-                return playerName + " completou o bestiario! Mestre dos monstros!";
-
-            // Conquistas especiais
-            case "minecraft:end/kill_dragon":
-            case "minecraft.end.kill_dragon":
-                String dragonPlayer = getRandomOnlinePlayer();
-                return playerName + " MATOU O DRAGAO DO FIM! " + dragonPlayer + ", vamos comemorar!";
-
-            case "minecraft:end/elytra":
-            case "minecraft.end.elytra":
-                return playerName + " conseguiu uma Elytra! Hora de voar!";
-
-            case "minecraft:nether/get_wither_skull":
-            case "minecraft.nether.get_wither_skull":
-                return playerName + " conseguiu uma cabeca de Wither! Cuidado galera!";
-
-            case "minecraft:nether/summon_wither":
-            case "minecraft.nether.summon_wither":
-                return playerName + " invocou o Wither! Todos em alerta!";
-
-            // Conquistas de mods (exemplos genericos)
-            default:
-                if (advancementName.contains("diamond") || advancementName.contains("diamante")) {
-                    String diamondPlayer = getRandomOnlinePlayer();
-                    return playerName + " conquistou algo com DIAMANTES! " + diamondPlayer + ", quer compartilhar?";
-                }
-                else if (advancementName.contains("nether") || advancementName.contains("inferno")) {
-                    return playerName + " explorou o Nether! Corajoso!";
-                }
-                else if (advancementName.contains("end") || advancementName.contains("fim")) {
-                    return playerName + " desbravou o Fim! Aventureiro!";
-                }
-                else if (advancementName.contains("boss") || advancementName.contains("chefe")) {
-                    return playerName + " derrotou um boss! Forca guerreiro!";
-                }
-                else if (advancementName.contains("magic") || advancementName.contains("magia") || advancementName.contains("encant")) {
-                    return playerName + " dominou a magia! Poderoso!";
-                }
-                else if (advancementName.contains("build") || advancementName.contains("constru")) {
-                    return playerName + " mostrou suas habilidades de construcao! Arquiteto!";
-                }
-                else if (advancementName.contains("explore") || advancementName.contains("explor")) {
-                    return playerName + " e um grande explorador! Novas terras descobertas!";
-                }
-                else if (advancementName.contains("craft") || advancementName.contains("criar")) {
-                    return playerName + " criou algo incrivel! Artesao talentoso!";
-                }
-                else {
-                    // Mensagem generica para outras conquistas
-                    return playerName + " conquistou: " + formatAdvancementName(advancementName) + "! Parabens!";
-                }
-        }
-    }
-
-    private String formatAdvancementName(String advancementName) {
-        // Formata o nome da conquista para ficar mais legivel
-        String formatted = advancementName
-                .replace("minecraft:", "")
-                .replace("minecraft.", "")
-                .replace("story/", "")
-                .replace("story.", "")
-                .replace("husbandry/", "")
-                .replace("husbandry.", "")
-                .replace("adventure/", "")
-                .replace("adventure.", "")
-                .replace("nether/", "")
-                .replace("nether.", "")
-                .replace("end/", "")
-                .replace("end.", "")
-                .replace("_", " ")
-                .replace("/", " ");
-
-        return capitalizeWords(formatted);
-    }
-
-    private String capitalizeWords(String text) {
-        String[] words = text.split(" ");
-        StringBuilder result = new StringBuilder();
-        for (String word : words) {
-            if (!word.isEmpty()) {
-                result.append(Character.toUpperCase(word.charAt(0)))
-                        .append(word.substring(1))
-                        .append(" ");
-            }
-        }
-        return result.toString().trim();
-    }
-
-    // ========== SISTEMA DE EVENTOS CUSTOMIZADOS ==========
-    public void addCustomEvent(String advancementId, String message) {
-        eventSystem.addCustomEvent(advancementId, message);
-    }
-
-    public void removeCustomEvent(String advancementId) {
-        eventSystem.removeCustomEvent(advancementId);
-    }
-
-    public Map<String, String> getCustomEvents() {
-        return eventSystem.getCustomEvents();
-    }
-
-    public List<String> getAvailableAdvancements() {
-        return eventSystem.getAvailableAdvancements();
+        NexusBotMod.LOGGER.info("🎯 Conquista: {} -> {}", playerName, advancementName);
     }
 
     // ========== SISTEMA DE CORES ==========
     public void showColorCodes(PlayerEntity player) {
-        player.sendMessage(new StringTextComponent("§6§l📚 CODIGOS DE CORES DISPONIVEIS:"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§6§l📚 CÓDIGOS DE CORES DISPONÍVEIS:"), player.getUUID());
         player.sendMessage(new StringTextComponent(""), player.getUUID());
 
         player.sendMessage(new StringTextComponent("§0&0 §8Preto"), player.getUUID());
@@ -312,16 +148,16 @@ public class ChatSystem {
         player.sendMessage(new StringTextComponent("§f&f §fBranco"), player.getUUID());
         player.sendMessage(new StringTextComponent(""), player.getUUID());
 
-        player.sendMessage(new StringTextComponent("§k&k §kTexto Aleatorio"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§k&k §kTexto Aleatório"), player.getUUID());
         player.sendMessage(new StringTextComponent("§l&l §lNegrito"), player.getUUID());
         player.sendMessage(new StringTextComponent("§m&m §mTachado"), player.getUUID());
         player.sendMessage(new StringTextComponent("§n&n §nSublinhado"), player.getUUID());
-        player.sendMessage(new StringTextComponent("§o&o §oItalico"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§o&o §oItálico"), player.getUUID());
         player.sendMessage(new StringTextComponent("§r&r §rReset"), player.getUUID());
         player.sendMessage(new StringTextComponent(""), player.getUUID());
 
-        player.sendMessage(new StringTextComponent("§7Exemplo: &cParabens &4Voce conseguiu &2Seu primeiro &bDraconic &3Core &nContinue assim&r!"), player.getUUID());
-        player.sendMessage(new StringTextComponent("§7Resultado: §cParabens §4Voce conseguiu §2Seu primeiro §bDraconic §3Core §nContinue assim§r!"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§7Exemplo: &cParabéns &4você conseguiu &2seu primeiro &bDraconic &3Core &nContinue assim&r!"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§7Resultado: §cParabéns §4você conseguiu §2seu primeiro §bDraconic §3Core §nContinue assim§r!"), player.getUUID());
     }
 
     // ========== ENVIO DE MENSAGENS DO BOT ==========
@@ -332,7 +168,7 @@ public class ChatSystem {
 
             textComponent.withStyle(style -> style.withHoverEvent(
                     new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                            new StringTextComponent("§6NexusBot\n§7Sistema de notificacoes automaticas")
+                            new StringTextComponent("§6NexusBot\n§7Sistema de notificações automáticas")
                     )
             ));
 
@@ -357,31 +193,77 @@ public class ChatSystem {
         handleBotResponse(player, message);
 
         if (isMuted(playerName)) {
-            player.sendMessage(new StringTextComponent("§c§l⚠ §cVoce esta §lMUTADO§c e nao pode falar no chat!"), player.getUUID());
+            player.sendMessage(new StringTextComponent("§c§l⚠ §cVocê está §lMUTADO§c e não pode falar no chat!"), player.getUUID());
             return;
         }
 
         if (!hasBypass(playerName)) {
             if (detectBadWords(message)) {
-                player.sendMessage(new StringTextComponent("§c§l🚫 §cSua mensagem contem palavras proibidas!"), player.getUUID());
+                player.sendMessage(new StringTextComponent("§c§l🚫 §cSua mensagem contém palavras proibidas!"), player.getUUID());
                 return;
             }
 
             if (detectSpam(playerUUID, message)) {
-                player.sendMessage(new StringTextComponent("§c§l⚠ §cNao faca §lSPAM§c no chat!"), player.getUUID());
+                player.sendMessage(new StringTextComponent("§c§l⚠ §cNão faça §lSPAM§c no chat!"), player.getUUID());
                 return;
             }
         }
 
-        String chatMode = getChatMode(playerUUID);
+        // ✅ MUDANÇA: Mensagem normal vai para GLOBAL (padrão)
+        sendGlobalMessage(player, message);
+        NexusBotMod.getInstance().getMonitorCore().getLoggerManager().logChat(player, message);
+    }
 
-        if ("global".equals(chatMode)) {
-            sendGlobalMessage(player, message);
-        } else {
-            sendLocalMessage(player, message);
+    // ========== NOVO SISTEMA: /l "mensagem" - ENVIA MENSAGEM LOCAL DIRETA ==========
+    public void sendLocalMessageDirect(PlayerEntity player, String message) {
+        String playerName = player.getName().getString();
+        String playerUUID = player.getStringUUID();
+
+        if (isMuted(playerName)) {
+            player.sendMessage(new StringTextComponent("§c§l⚠ §cVocê está §lMUTADO§c e não pode falar no chat!"), player.getUUID());
+            return;
         }
 
-        NexusBotMod.getInstance().getMonitorCore().getLoggerManager().logChat(player, message);
+        if (!hasBypass(playerName)) {
+            if (detectBadWords(message)) {
+                player.sendMessage(new StringTextComponent("§c§l🚫 §cSua mensagem contém palavras proibidas!"), player.getUUID());
+                return;
+            }
+
+            if (detectSpam(playerUUID, message)) {
+                player.sendMessage(new StringTextComponent("§c§l⚠ §cNão faça §lSPAM§c no chat!"), player.getUUID());
+                return;
+            }
+        }
+
+        sendLocalMessage(player, message);
+        NexusBotMod.getInstance().getMonitorCore().getLoggerManager().logChat(player, "[LOCAL] " + message);
+    }
+
+    // ========== NOVO SISTEMA: /g "mensagem" - ENVIA MENSAGEM GLOBAL DIRETA ==========
+    public void sendGlobalMessageDirect(PlayerEntity player, String message) {
+        String playerName = player.getName().getString();
+        String playerUUID = player.getStringUUID();
+
+        if (isMuted(playerName)) {
+            player.sendMessage(new StringTextComponent("§c§l⚠ §cVocê está §lMUTADO§c e não pode falar no chat!"), player.getUUID());
+            return;
+        }
+
+        if (!hasBypass(playerName)) {
+            if (detectBadWords(message)) {
+                player.sendMessage(new StringTextComponent("§c§l🚫 §cSua mensagem contém palavras proibidas!"), player.getUUID());
+                return;
+            }
+
+            if (detectSpam(playerUUID, message)) {
+                player.sendMessage(new StringTextComponent("§c§l⚠ §cNão faça §lSPAM§c no chat!"), player.getUUID());
+                return;
+            }
+        }
+
+        sendGlobalMessage(player, message);
+        NexusBotMod.getInstance().getMonitorCore().getLoggerManager().logChat(player, "[GLOBAL] " + message);
     }
 
     // ========== CHAT LOCAL (125 BLOCOs) ==========
@@ -431,6 +313,30 @@ public class ChatSystem {
         }
     }
 
+    // ========== SISTEMA DE MODO DE CHAT ==========
+    public void setGlobalMode(PlayerEntity player) {
+        setChatMode(player.getStringUUID(), "global");
+        player.sendMessage(new StringTextComponent("§6§l🌍 §6Chat Global §lATIVADO§6!"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§7Agora §etodas§7 suas mensagens serão enviadas para §etodo o servidor§7."), player.getUUID());
+        player.sendMessage(new StringTextComponent("§7Use §b/l §7para voltar ao chat local."), player.getUUID());
+    }
+
+    public void setLocalMode(PlayerEntity player) {
+        setChatMode(player.getStringUUID(), "local");
+        player.sendMessage(new StringTextComponent("§b§l🌎 §bChat Local §lATIVADO§b!"), player.getUUID());
+        player.sendMessage(new StringTextComponent("§7Agora suas mensagens serão enviadas apenas para jogadores em um raio de §b125 blocos§7."), player.getUUID());
+        player.sendMessage(new StringTextComponent("§7Use §6/g §7para chat global."), player.getUUID());
+    }
+
+    public void setChatMode(String playerUUID, String mode) {
+        chatModes.put(playerUUID, mode);
+        NexusBotMod.LOGGER.info("Modo de chat alterado: {} -> {}", playerUUID, mode);
+    }
+
+    public String getChatMode(String playerUUID) {
+        return chatModes.getOrDefault(playerUUID, "global"); // Padrão é GLOBAL
+    }
+
     // ========== CHAT STAFF ==========
     public void sendStaffMessage(PlayerEntity player, String message) {
         String formattedMessage = "§8[§4Staff§8] §c" + player.getName().getString() + " §8» §f" + message;
@@ -438,7 +344,7 @@ public class ChatSystem {
 
         textComponent.withStyle(style -> style.withHoverEvent(
                 new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                        new StringTextComponent("§4Chat da Staff\n§7Apenas jogadores com permissao de §cOP§7 veem esta mensagem")
+                        new StringTextComponent("§4Chat da Staff\n§7Apenas jogadores com permissão de §cOP§7 veem esta mensagem")
                 )
         ));
 
@@ -460,7 +366,7 @@ public class ChatSystem {
 
         ServerPlayerEntity target = sender.getServer().getPlayerList().getPlayerByName(targetName);
         if (target != null) {
-            String senderMessage = "§8[§d" + targetName + "§8] §7Voce §8» §f" + message;
+            String senderMessage = "§8[§d" + targetName + "§8] §7Você §8» §f" + message;
             String targetMessage = "§8[§d" + sender.getName().getString() + "§8] §7" + sender.getName().getString() + " §8» §f" + message;
 
             sender.sendMessage(new StringTextComponent(senderMessage), sender.getUUID());
@@ -468,7 +374,7 @@ public class ChatSystem {
 
             NexusBotMod.LOGGER.info("MP: {} -> {}: {}", sender.getName().getString(), targetName, message);
         } else {
-            sender.sendMessage(new StringTextComponent("§c§l❌ §cJogador '§f" + targetName + "§c' nao encontrado!"), sender.getUUID());
+            sender.sendMessage(new StringTextComponent("§c§l❌ §cJogador '§f" + targetName + "§c' não encontrado!"), sender.getUUID());
         }
     }
 
@@ -519,24 +425,6 @@ public class ChatSystem {
         return false;
     }
 
-    // ========== SISTEMA DE MODO DE CHAT ==========
-    public void setGlobalMode(PlayerEntity player) {
-        setChatMode(player.getStringUUID(), "global");
-    }
-
-    public void setLocalMode(PlayerEntity player) {
-        setChatMode(player.getStringUUID(), "local");
-    }
-
-    public void setChatMode(String playerUUID, String mode) {
-        chatModes.put(playerUUID, mode);
-        NexusBotMod.LOGGER.info("Modo de chat alterado: {} -> {}", playerUUID, mode);
-    }
-
-    public String getChatMode(String playerUUID) {
-        return chatModes.getOrDefault(playerUUID, "local");
-    }
-
     // ========== SISTEMA DE MUTE ==========
     public void mutePlayer(String playerName) {
         mutedPlayers.add(playerName.toLowerCase());
@@ -576,6 +464,24 @@ public class ChatSystem {
     public void addWildcardWord(String wildcard) {
         wildcardWords.add(wildcard.toLowerCase());
         NexusBotMod.LOGGER.info("Wildcard adicionado: {}", wildcard);
+    }
+
+    // ========== SISTEMA DE EVENTOS CUSTOMIZADOS ==========
+    public void addCustomEvent(String advancementId, String message) {
+        eventSystem.addCustomEvent(advancementId, message);
+    }
+
+    public void removeCustomEvent(String advancementId) {
+        eventSystem.removeCustomEvent(advancementId);
+    }
+
+    public Map<String, String> getCustomEvents() {
+        return eventSystem.getCustomEvents();
+    }
+
+    public List<String> getAvailableAdvancements() {
+        // Método simplificado - retorna lista vazia já que removemos o autocomplete
+        return new ArrayList<>();
     }
 
     // ========== LISTA DE JOGADORES ONLINE ==========
