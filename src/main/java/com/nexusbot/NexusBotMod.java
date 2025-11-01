@@ -43,7 +43,7 @@ public class NexusBotMod {
     private ConfigManager configManager;
 
     public static GatewayDiscordClient botdc;
-    private static String canalID;
+    public static String canalID;
 
     public NexusBotMod() {
         instance = this;
