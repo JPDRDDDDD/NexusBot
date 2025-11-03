@@ -117,7 +117,6 @@ public class LoggerManager {
         if (message.length() > 5) {
             notifyBotActivity(player, "CHAT", "disse: " + (message.length() > 20 ? message.substring(0, 20) + "..." : message));
         }
-        NexusBotMod.LOGGER.info("💬 {}: {}", player.getName().getString(), message);
     }
 
     public void logJoin(PlayerEntity player) {
@@ -125,7 +124,6 @@ public class LoggerManager {
         logToFile(player, "SISTEMA", "Posição: " + getPositionString(player));
         logPlayerEffects(player, "ENTRADA");
         notifyBotActivity(player, "ENTRADA", "entrou no servidor");
-        NexusBotMod.LOGGER.info("👋 {} entrou em {}", player.getName().getString(), getPositionString(player));
     }
 
     public void logLeave(PlayerEntity player) {
@@ -134,7 +132,6 @@ public class LoggerManager {
         logFullPlayerInventory(player, "SAIDA");
         logPlayerEffects(player, "SAIDA");
         notifyBotActivity(player, "SAIDA", "saiu do servidor");
-        NexusBotMod.LOGGER.info("👋 {} saiu de {}", player.getName().getString(), getPositionString(player));
     }
 
     public void logCommand(PlayerEntity player, String command) {
@@ -155,7 +152,6 @@ public class LoggerManager {
         String deathCause = getDeathCauseName(cause);
         notifyBotActivity(player, "MORTE", "morreu: " + deathCause);
 
-        NexusBotMod.LOGGER.info("💀 {} morreu: {} em {}", player.getName().getString(), cause, getPositionString(player));
         logFullInventoryToConsole(player, "MORTE");
         logEffectsToConsole(player, "MORTE");
     }
@@ -375,8 +371,6 @@ public class LoggerManager {
         String logMsg = String.format("ABRIU %s em %d,%d,%d", chestType, pos.getX(), pos.getY(), pos.getZ());
         logToFile(player, "BAU", logMsg);
         notifyBotActivity(player, "INTERACAO", "abriu " + chestType);
-        NexusBotMod.LOGGER.info("📦 {} abriu {} em {}, {}, {}",
-                player.getName().getString(), chestType, pos.getX(), pos.getY(), pos.getZ());
     }
 
     public void logChestPut(PlayerEntity player, BlockPos pos, ItemStack item, String chestType) {
@@ -384,8 +378,6 @@ public class LoggerManager {
         String logMsg = String.format("COLOCOU no %s em %d,%d,%d: %s", chestType, pos.getX(), pos.getY(), pos.getZ(), itemInfo);
         logToFile(player, "BAU", logMsg);
         notifyBotActivity(player, "ITEM", "colocou " + itemInfo + " no " + chestType);
-        NexusBotMod.LOGGER.info("📥 {} colocou no {} {} em {}, {}, {}",
-                player.getName().getString(), chestType, itemInfo, pos.getX(), pos.getY(), pos.getZ());
     }
 
     public void logChestTake(PlayerEntity player, BlockPos pos, ItemStack item, String chestType) {
@@ -393,8 +385,6 @@ public class LoggerManager {
         String logMsg = String.format("TIROU do %s em %d,%d,%d: %s", chestType, pos.getX(), pos.getY(), pos.getZ(), itemInfo);
         logToFile(player, "BAU", logMsg);
         notifyBotActivity(player, "ITEM", "tirou " + itemInfo + " do " + chestType);
-        NexusBotMod.LOGGER.info("📤 {} tirou do {} {} em {}, {}, {}",
-                player.getName().getString(), chestType, itemInfo, pos.getX(), pos.getY(), pos.getZ());
     }
 
     // ========== SISTEMA DE ITENS ==========
@@ -407,21 +397,18 @@ public class LoggerManager {
         } else {
             notifyBotActivity(player, "ITEM", "coletou " + itemInfo);
         }
-        NexusBotMod.LOGGER.info("🎁 {} {} {}", player.getName().getString(), action, itemInfo);
     }
 
     public void logCrafting(PlayerEntity player, ItemStack item) {
         String itemInfo = item.getCount() + "x " + getItemName(item);
         logToFile(player, "CRAFT", "CRAFTOU: " + itemInfo);
         notifyBotActivity(player, "CRAFT", "crafrou " + itemInfo);
-        NexusBotMod.LOGGER.info("🛠️ {} craftou {}", player.getName().getString(), itemInfo);
     }
 
     public void logSmelting(PlayerEntity player, ItemStack item) {
         String itemInfo = item.getCount() + "x " + getItemName(item);
         logToFile(player, "SMELT", "FUNDIU: " + itemInfo);
         notifyBotActivity(player, "CRAFT", "fundiu " + itemInfo);
-        NexusBotMod.LOGGER.info("🔥 {} fundiu {}", player.getName().getString(), itemInfo);
     }
 
     // ========== SISTEMA DE MINERAÇÃO E CONSTRUÇÃO ==========
@@ -433,14 +420,12 @@ public class LoggerManager {
         } else {
             notifyBotActivity(player, "CONSTRUCAO", "quebrou " + blockName);
         }
-        NexusBotMod.LOGGER.info("⛏️ {} quebrou {} em {}, {}, {}", player.getName().getString(), blockName, pos.getX(), pos.getY(), pos.getZ());
     }
 
     public void logBlockPlace(PlayerEntity player, BlockPos pos, String blockName) {
         String logMsg = String.format("PLACOU %s em %d,%d,%d", blockName, pos.getX(), pos.getY(), pos.getZ());
         logToFile(player, "BLOCOS", logMsg);
         notifyBotActivity(player, "CONSTRUCAO", "construiu com " + blockName);
-        NexusBotMod.LOGGER.info("🧱 {} colocou {} em {}, {}, {}", player.getName().getString(), blockName, pos.getX(), pos.getY(), pos.getZ());
     }
 
     private boolean isValuableBlock(String blockName) {
@@ -456,7 +441,6 @@ public class LoggerManager {
         logToFile(player, "MODERACAO", punishment + " - Motivo: " + reason);
         logToFile(player, "MODERACAO", "Posição: " + getPositionString(player));
         notifyBotActivity(player, "MODERACAO", "foi " + punishment.toLowerCase());
-        NexusBotMod.LOGGER.info("⚖️ {} {} por: {} em {}", player.getName().getString(), punishment, reason, getPositionString(player));
     }
 
     // ========== SISTEMA DE MOVIMENTAÇÃO ==========
@@ -465,7 +449,6 @@ public class LoggerManager {
         if (isLongDistance(from, to)) {
             notifyBotActivity(player, "EXPLORACAO", "está explorando o mundo");
         }
-        NexusBotMod.LOGGER.info("🚶 {} moveu: {} → {}", player.getName().getString(), from, to);
     }
 
     private boolean isLongDistance(String from, String to) {
@@ -492,7 +475,6 @@ public class LoggerManager {
         } else {
             notifyBotActivity(player, "COMBATE", "atacou " + entityType);
         }
-        NexusBotMod.LOGGER.info("⚔️ {} atacou {}", player.getName().getString(), entityType);
     }
 
     public void logItemUse(PlayerEntity player, ItemStack item) {
@@ -501,7 +483,6 @@ public class LoggerManager {
         if (isSpecialItem(item)) {
             notifyBotActivity(player, "ITEM", "usou " + itemInfo);
         }
-        NexusBotMod.LOGGER.info("🔄 {} usou {}", player.getName().getString(), itemInfo);
     }
 
     private boolean isSpecialItem(ItemStack item) {
@@ -517,7 +498,6 @@ public class LoggerManager {
         if (levels > 0 || experience > 100) {
             notifyBotActivity(player, "XP", "ganhou " + experience + " XP");
         }
-        NexusBotMod.LOGGER.info("⭐ {} ganhou {} XP e {} níveis", player.getName().getString(), experience, levels);
     }
 
     // ========== SISTEMA DE TICKETS COMPLETO ==========
@@ -525,7 +505,6 @@ public class LoggerManager {
         String logMsg = String.format("CRIOU ticket #%d: %s", ticketId, message);
         logToFile(player, "TICKET", logMsg);
         notifyBotActivity(player, "TICKET", "criou ticket #" + ticketId);
-        NexusBotMod.LOGGER.info("🎫 {} criou ticket #{}: {}", player.getName().getString(), ticketId, message);
     }
 
     public void logTicketResponse(PlayerEntity staff, PlayerEntity target, int ticketId, String response) {
@@ -538,43 +517,35 @@ public class LoggerManager {
         notifyBotActivity(staff, "TICKET", "respondeu ticket #" + ticketId);
         notifyBotActivity(target, "TICKET", "recebeu resposta do ticket #" + ticketId);
 
-        NexusBotMod.LOGGER.info("🎫 {} respondeu ticket #{} para {}: {}",
-                staff.getName().getString(), ticketId, target.getName().getString(), response);
     }
 
     public void logTicketStatus(PlayerEntity player, int ticketId, String oldStatus, String newStatus) {
         String logMsg = String.format("ALTEROU status ticket #%d: %s -> %s", ticketId, oldStatus, newStatus);
         logToFile(player, "TICKET", logMsg);
         notifyBotActivity(player, "TICKET", "alterou status do ticket #" + ticketId + " para " + newStatus);
-        NexusBotMod.LOGGER.info("🎫 {} alterou status ticket #{}: {} -> {}",
-                player.getName().getString(), ticketId, oldStatus, newStatus);
     }
 
     public void logTicketClose(PlayerEntity player, int ticketId, String reason) {
         String logMsg = String.format("FECHOU ticket #%d: %s", ticketId, reason);
         logToFile(player, "TICKET", logMsg);
         notifyBotActivity(player, "TICKET", "fechou ticket #" + ticketId);
-        NexusBotMod.LOGGER.info("🎫 {} fechou ticket #{}: {}", player.getName().getString(), ticketId, reason);
     }
 
     public void logTicketAccept(PlayerEntity staff, int ticketId, String playerName) {
         String logMsg = String.format("ACEITOU ticket #%d de %s", ticketId, playerName);
         logToFile(staff, "TICKET", logMsg);
         notifyBotActivity(staff, "TICKET", "aceitou ticket #" + ticketId + " de " + playerName);
-        NexusBotMod.LOGGER.info("🎫 {} aceitou ticket #{} de {}", staff.getName().getString(), ticketId, playerName);
     }
 
     // ========== SISTEMA DE TELETRANSPORTE ==========
     public void logTeleport(PlayerEntity player, String from, String to) {
         logToFile(player, "TELETRANSPORTE", "De: " + from + " Para: " + to);
         notifyBotActivity(player, "TELETRANSPORTE", "teleportou para novas coordenadas");
-        NexusBotMod.LOGGER.info("✨ {} teleportou: {} → {}", player.getName().getString(), from, to);
     }
 
     public void logDimensionChange(PlayerEntity player, String fromDimension, String toDimension) {
         logToFile(player, "SISTEMA", "Mudou de dimensão: " + fromDimension + " → " + toDimension);
         notifyBotActivity(player, "EXPLORACAO", "mudou para dimensão " + toDimension);
-        NexusBotMod.LOGGER.info("🌌 {} mudou de {} para {}", player.getName().getString(), fromDimension, toDimension);
     }
 
     // ========== SISTEMA DE VILAGER ==========
@@ -584,7 +555,6 @@ public class LoggerManager {
         String logMsg = String.format("TROCOU com %s: %s -> %s", villagerType, givenInfo, receivedInfo);
         logToFile(player, "TRADE", logMsg);
         notifyBotActivity(player, "TRADE", "trocou com " + villagerType);
-        NexusBotMod.LOGGER.info("🤝 {} trocou {} por {} com {}", player.getName().getString(), givenInfo, receivedInfo, villagerType);
     }
 
     // ========== MÉTODOS AUXILIARES ==========
@@ -669,7 +639,6 @@ public class LoggerManager {
             }
         }
         playerWriters.clear();
-        NexusBotMod.LOGGER.info("🔧 Sistema de logs encerrado");
     }
 
     public void logTicket(PlayerEntity player, String s) {

@@ -2,9 +2,10 @@ plugins {
     id 'eclipse'
     id 'maven-publish'
     id 'net.minecraftforge.gradle' version '5.1.+'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
-version = '2.3.6'
+version = '2.3.7'
 group = 'com.nexusbot'
 archivesBaseName = 'Nexusbot'
 
@@ -53,9 +54,17 @@ minecraft {
 
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
+repositories {
+    mavenCentral()
+    maven {
+        name 'm2-dv8tion'
+        url 'https://m2.dv8tion.net/releases'
+    }
+}
+
 dependencies {
     minecraft 'net.minecraftforge:forge:1.16.5-36.2.42'
-    implementation "net.dv8tion:JDA:6.1.0"
+    implementation "net.dv8tion:JDA:4.4.1_353"
 }
 
 jar {
@@ -91,24 +100,54 @@ tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-task fatJar(type: Jar) {
-    archiveClassifier.set('all')
-    from sourceSets.main.output
+/**
+ * Tarefa shadowJar — empacota o JDA e todas as libs dentro do mod
+ * e faz relocação de pacotes pra evitar conflito com outros mods.
+ */
+shadowJar {
+    archiveClassifier.set('')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    dependsOn configurations.runtimeClasspath
-    from {
-        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
-    }
+    // Relocação para evitar conflitos com outros mods
+    relocate 'net.dv8tion.jda', 'com.nexusbot.libs.jda'
+    relocate 'okhttp3', 'com.nexusbot.libs.okhttp3'
+    relocate 'okio', 'com.nexusbot.libs.okio'
+    relocate 'org.json', 'com.nexusbot.libs.json'
+    relocate 'com.fasterxml.jackson', 'com.nexusbot.libs.jackson'
 
     manifest {
         attributes(
                 "Specification-Title": "nexusbot",
-                "Specification-Vendor": "nexusbot",
                 "Specification-Version": "1",
                 "Implementation-Title": project.name,
-                "Implementation-Version": project.jar.archiveVersion,
-                "Implementation-Vendor": "nexusbot",
+                "Implementation-Version": project.version,
                 "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         )
+    }
+}
+
+// Garante que o JAR gerado é o shadowed (com dependências inclusas)
+build.dependsOn shadowJar
+// Tarefa para gerar shadowJar e verificar JDA
+task checkJdaJar(dependsOn: shadowJar) {
+    doLast {
+        def jarFile = shadowJar.archiveFile.get().asFile
+        println "Jar gerado em: ${jarFile}"
+
+        // Verifica se contém a pasta da JDA
+        def containsJda = false
+        java.util.jar.JarFile jar = new java.util.jar.JarFile(jarFile)
+        jar.entries().each { entry ->
+            if (entry.name.startsWith("net/dv8tion/jda/api/")) {
+                containsJda = true
+            }
+        }
+        jar.close()
+
+        if (containsJda) {
+            println "✅ JDA encontrada dentro do .jar! Tudo certo para colocar no servidor."
+        } else {
+            println "❌ JDA não encontrada! Verifique seu shadowJar, talvez ele não esteja incluindo as dependências."
+        }
     }
 }

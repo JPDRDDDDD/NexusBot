@@ -104,8 +104,6 @@ public class MonitorCore {
         int offenses = offenseCount.getOrDefault(playerUUID, 0) + 1;
         offenseCount.put(playerUUID, offenses);
 
-        NexusBotMod.LOGGER.warn("🚨 NEXUSGUARD AUTO-PUNIÇÃO: {} - {} (#{})", playerName, reason, offenses);
-
         // ✅ CORREÇÃO: Enviar mensagem do NexusBot sobre a punição
         String botMessage = "💀 " + playerName + " foi punido automaticamente. Motivo: " + reason;
         chatSystem.sendPunishmentMessage(botMessage);
@@ -176,8 +174,6 @@ public class MonitorCore {
 
             // ✅ CORREÇÃO: Detectar se deu mais de 16 hits em 1 segundo
             if (hits > 16) {
-                NexusBotMod.LOGGER.warn("🖱️ NEXUSGUARD AUTOCLICK DETECTADO: {} - {} hits em 1s", player.getName().getString(), hits);
-
                 // ✅ CORREÇÃO: Enviar mensagem do NexusBot sobre autoclick detectado
                 String botMessage = "🚫 Autoclick detectado: " + player.getName().getString() + " (" + hits + " hits em 1s)";
                 chatSystem.sendBotMessage(botMessage);

@@ -1,11 +1,10 @@
 package com.nexusbot.systems;
 
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.util.SoundEvents;
-import net.minecraft.util.SoundCategory;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.event.HoverEvent;
 import net.minecraft.world.server.ServerWorld;
@@ -386,13 +385,9 @@ public class ChatSystem {
     }
     public void sendDiscordMessage(String nome,String message){
         // Envia também para o Discord
-        if (NexusBotMod.botDC == null || NexusBotMod.botDC.getStatus() != JDA.Status.CONNECTED) {
-            return;
-        }
-
-        TextChannel canal = NexusBotMod.botDC.getTextChannelById(NexusBotMod.canalID);
+        if (botDC == null || botDC.getStatus() != JDA.Status.CONNECTED) return;
+        TextChannel canal = botDC.getTextChannelById(canalID);
         if (canal != null) {
-            // ✅ Usa queue() (assíncrono e seguro para evitar travar o servidor)
             canal.sendMessage("🌐 **" +nome + ":** " + message).queue();
         }
     }
@@ -526,17 +521,14 @@ public class ChatSystem {
             NexusBotMod.LOGGER.info("Chat global enviado para {} jogadores", totalPlayers);
         }
         // Envia também para o Discord
-        if (NexusBotMod.botDC == null || NexusBotMod.botDC.getStatus() != JDA.Status.CONNECTED) {
+        if (botDC == null || botDC.getStatus() != JDA.Status.CONNECTED) return;
+        TextChannel canal = botDC.getTextChannelById(canalID);
+        if (canal != null) {
+            canal.sendMessage("🌐 **" + player.getName().getString() + ":** " + message).queue();
+        }
+        if (botDC == null || botDC.getStatus() != JDA.Status.CONNECTED) {
             NexusBotMod.LOGGER.warn("[Chat Global] Discord desconectado ou bot não iniciado.");
             return;
-        }
-
-        TextChannel canal = NexusBotMod.botDC.getTextChannelById(NexusBotMod.canalID);
-        if (canal != null) {
-            // ✅ Usa queue() (assíncrono e seguro para evitar travar o servidor)
-            canal.sendMessage("🌐 **" + player.getName().getString() + ":** " + message).queue();
-        } else {
-            NexusBotMod.LOGGER.warn("[Chat Global] Canal do Discord não encontrado! ID inválido ou não configurado.");
         }
     }
 
@@ -557,7 +549,6 @@ public class ChatSystem {
 
     public void setChatMode(String playerUUID, String mode) {
         chatModes.put(playerUUID, mode);
-        NexusBotMod.LOGGER.info("Modo de chat alterado: {} -> {}", playerUUID, mode);
     }
 
     public String getChatMode(String playerUUID) {
@@ -583,7 +574,6 @@ public class ChatSystem {
                     staffCount++;
                 }
             }
-            NexusBotMod.LOGGER.info("Chat staff enviado para {} operadores", staffCount);
         }
     }
 
@@ -611,8 +601,6 @@ public class ChatSystem {
             // ✅ CORREÇÃO: Toca som "Level Up" para o destinatário (Método Correto)
             playLevelUpSound(target);
 
-            NexusBotMod.LOGGER.info("MP: {} -> {}: {}", sender.getName().getString(), targetName, message);
-
             // Salva último destinatário para sistema de resposta (/r)
             lastTellTarget.put(sender.getName().getString(), targetName);
 
@@ -627,9 +615,6 @@ public class ChatSystem {
             // ✅ CORREÇÃO: Método correto para tocar som para um jogador específico
             // Usando playSound diretamente no jogador com volume alto (2.0F)
             player.playSound(SoundEvents.PLAYER_LEVELUP, 2.0F, 1.0F);
-
-            // Log para debug
-            NexusBotMod.LOGGER.info("🔊 Som de Level Up tocado para: {} (Volume: 2.0)", player.getName().getString());
 
         } catch (Exception e) {
             NexusBotMod.LOGGER.error("❌ Erro ao tocar som para {}: {}", player.getName().getString(), e.getMessage());
