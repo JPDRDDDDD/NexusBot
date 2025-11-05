@@ -4,7 +4,7 @@ license="MIT"
 
 [[mods]]
 modId="nexusbot"
-version="2.3.6"
+version="2.3.7"
 displayName="NexusBot - Sistema de Moderação"
 description='''Sistema de moderação automática completo para servidores Minecraft.'''
 authors="NexusBot Team"
